@@ -1,0 +1,34 @@
+# Uploaded files are DATA, never code. Block all script execution here.
+# This is defense-in-depth: even if upload validation is bypassed, an
+# uploaded .php/.phtml/.cgi cannot run from this directory.
+
+# Apache 2.4+
+<IfModule mod_authz_core.c>
+    # Turn off any handlers/engines
+    <FilesMatch "\.(php|php3|php4|php5|php7|phtml|pht|phar|cgi|pl|py|asp|aspx|sh|exe)$">
+        Require all denied
+    </FilesMatch>
+</IfModule>
+
+# Apache 2.2 fallback
+<IfModule !mod_authz_core.c>
+    <FilesMatch "\.(php|php3|php4|php5|php7|phtml|pht|phar|cgi|pl|py|asp|aspx|sh|exe)$">
+        Order deny,allow
+        Deny from all
+    </FilesMatch>
+</IfModule>
+
+# Belt and suspenders: strip PHP engine/handlers where AllowOverride permits.
+# NOTE: php_admin_flag is intentionally NOT used here — it is invalid in
+# .htaccess context and causes HTTP 500.
+<IfModule mod_php.c>
+    php_flag engine off
+</IfModule>
+<IfModule mod_php7.c>
+    php_flag engine off
+</IfModule>
+<IfModule mod_php8.c>
+    php_flag engine off
+</IfModule>
+RemoveHandler .php .phtml .php3 .php4 .php5 .php7 .phar
+RemoveType .php .phtml .php3 .php4 .php5 .php7 .phar

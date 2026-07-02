@@ -1,0 +1,17 @@
+# Fallback rewrite rules for shared hosting where DocumentRoot points to project root.
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # Skip rewrite when requesting files that exist in the project root.
+    RewriteCond %{REQUEST_FILENAME} -f [OR]
+    RewriteCond %{REQUEST_FILENAME} -d
+    RewriteRule ^ - [L]
+
+    # Prevent re-rewriting requests that are already under /public.
+    RewriteCond %{REQUEST_URI} !^/public/ [NC]
+    RewriteRule ^(.*)$ public/$1 [L,QSA]
+</IfModule>
+
+<IfModule !mod_rewrite.c>
+    ErrorDocument 404 /public/index.php
+</IfModule>
