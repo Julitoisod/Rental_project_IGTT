@@ -12,7 +12,12 @@
         $lateHours = $isLate
             ? (int) ceil((strtotime($today) - strtotime($rental['return_date'])) / 3600)
             : 0;
-        $lateFee   = $isLate ? $lateHours * $rental['item_price'] * 0.1 : 0;
+        // Match the controller's processReturn() — per-hour overstay_charge from item config,
+        // falling back to 100/h if the item record didn't carry one.
+        $perHourOverstay = isset($rental['item_overstay_charge'])
+            ? (float) $rental['item_overstay_charge']
+            : 100.0;
+        $lateFee   = $isLate ? $lateHours * $perHourOverstay : 0;
         $newTotal  = $rental['total_cost'] + $lateFee;
     ?>
 
@@ -44,7 +49,7 @@
         </div>
     <?php endif; ?>
 
-    <form action="<?= base_url('rentals/' . $rental['id'] . '/return') ?>" method="POST"
+    <form action="<?= base_url(role_url_prefix() . '/rentals/' . $rental['id'] . '/return') ?>" method="POST"
           data-confirm="Confirm the return of this item?"
           data-confirm-type="info"
           data-confirm-title="Confirm Return"
@@ -54,7 +59,7 @@
             <button class="btn btn-warning">
                 <i class="bi bi-check-circle"></i> Confirm Return
             </button>
-            <a href="<?= base_url('rentals') ?>" class="btn btn-outline-secondary">Cancel</a>
+            <a href="<?= base_url(role_url_prefix() . '/rentals') ?>" class="btn btn-outline-secondary">Cancel</a>
         </div>
     </form>
 </div>

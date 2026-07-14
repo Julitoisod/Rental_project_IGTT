@@ -65,6 +65,27 @@ class AuthController extends BaseController
             });
         }
 
+        $recommendedItems = $this->getRecommendedItems();
+
+        // Social proof for shop cards: avg rating + times rented, keyed by item id
+        $allItemIds = array_map('intval', array_unique(array_merge(
+            array_column($items, 'id'),
+            array_column($recommendedItems, 'id')
+        )));
+        $ratings    = (new \App\Models\ReviewModel())->getAvgRatingsForItems($allItemIds);
+        $rentCounts = [];
+        if ($allItemIds !== []) {
+            $rows = \Config\Database::connect()->table('rentals')
+                ->select('item_id, COUNT(id) AS cnt')
+                ->whereIn('item_id', $allItemIds)
+                ->whereIn('status', ['ongoing', 'overdue', 'returned'])
+                ->groupBy('item_id')
+                ->get()->getResultArray();
+            foreach ($rows as $row) {
+                $rentCounts[(int) $row['item_id']] = (int) $row['cnt'];
+            }
+        }
+
         $data = [
             'items'       => $items,
             'categories'  => $categoryModel->orderBy('name', 'ASC')->findAll(),
@@ -73,7 +94,9 @@ class AuthController extends BaseController
             'activeSort'  => $activeSort,
             'activeAvail' => $activeAvail,
             'reviews'     => $this->getRecentReviews(),
-            'recommendedItems' => $this->getRecommendedItems(),
+            'recommendedItems' => $recommendedItems,
+            'ratings'     => $ratings,
+            'rentCounts'  => $rentCounts,
         ];
 
         return view('auth/portal', $data);

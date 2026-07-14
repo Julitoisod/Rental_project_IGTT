@@ -11,6 +11,21 @@ use App\Models\RentalModel;
 
 class ItemController extends BaseController
 {
+    /**
+     * Predefined rental terms owners tick per item; the checked ones are
+     * stored in items.rental_details and shown to customers.
+     */
+    public const RENTAL_TERM_OPTIONS = [
+        'Valid ID required upon pickup',
+        "Valid driver's license required",
+        'Security deposit required',
+        'Helmet must be worn at all times',
+        'Fuel not included — return with the same fuel level',
+        'Late return is charged per hour (overstay fee)',
+        "Any damage or loss is the renter's responsibility",
+        'Do not lend the unit to another person',
+    ];
+
     protected ItemModel $model;
 
     public function __construct()
@@ -127,7 +142,23 @@ class ItemController extends BaseController
     public function create()
     {
         $cats = (new CategoryModel())->findAll();
-        return view('items/create', ['pageTitle' => 'Add Item', 'categories' => $cats]);
+        return view('items/create', [
+            'pageTitle'   => 'Add Item',
+            'categories'  => $cats,
+            'termOptions' => self::RENTAL_TERM_OPTIONS,
+        ]);
+    }
+
+    /**
+     * Build the rental_details text from the checked predefined terms.
+     */
+    private function rentalDetailsFromPost(): ?string
+    {
+        $checked = array_intersect(
+            (array) $this->request->getPost('rental_terms'),
+            self::RENTAL_TERM_OPTIONS
+        );
+        return $checked ? implode(' • ', $checked) : null;
     }
 
     public function store()
@@ -169,7 +200,7 @@ class ItemController extends BaseController
             'rate_option_1' => json_encode($rateOption1),
             'rate_option_2' => json_encode($rateOption2),
             'overstay_charge' => (float) ($this->request->getPost('overstay_charge') ?? 100),
-            'rental_details' => $this->request->getPost('rental_details'),
+            'rental_details' => $this->rentalDetailsFromPost(),
         ];
 
         foreach (['image', 'image2', 'image3'] as $field) {
@@ -185,16 +216,21 @@ class ItemController extends BaseController
 
         $this->model->save($data);
 
-        return redirect()->to('/items')->with('success', 'Item added to inventory.');
+        return redirect()->to($this->rolePrefix() . '/items')->with('success', 'Item added to inventory.');
     }
 
     public function edit(int $id)
     {
         $item = $this->model->where('owner_id', session()->get('user_id'))->find($id);
-        if (! $item) return redirect()->to('/items')->with('error', 'Item not found.');
+        if (! $item) return redirect()->to($this->rolePrefix() . '/items')->with('error', 'Item not found.');
 
         $cats = (new CategoryModel())->findAll();
-        return view('items/edit', ['pageTitle' => 'Edit Item', 'item' => $item, 'categories' => $cats]);
+        return view('items/edit', [
+            'pageTitle'   => 'Edit Item',
+            'item'        => $item,
+            'categories'  => $cats,
+            'termOptions' => self::RENTAL_TERM_OPTIONS,
+        ]);
     }
 
     public function update(int $id)
@@ -230,11 +266,11 @@ class ItemController extends BaseController
                 'price' => (float) $this->request->getPost('rate_option_2_price'),
             ]),
             'overstay_charge' => (float) ($this->request->getPost('overstay_charge') ?? 100),
-            'rental_details' => $this->request->getPost('rental_details'),
+            'rental_details' => $this->rentalDetailsFromPost(),
         ];
 
         $old = $this->model->where('owner_id', session()->get('user_id'))->find($id);
-        if (! $old) return redirect()->to('/items')->with('error', 'Item not found.');
+        if (! $old) return redirect()->to($this->rolePrefix() . '/items')->with('error', 'Item not found.');
         foreach (['image', 'image2', 'image3'] as $field) {
             $newName = $this->validateImageUpload($this->request->getFile($field));
             if ($newName === 'INVALID') {
@@ -252,14 +288,30 @@ class ItemController extends BaseController
 
         $this->model->update($id, $data);
 
-        return redirect()->to('/items')->with('success', 'Item updated.');
+        return redirect()->to($this->rolePrefix() . '/items')->with('success', 'Item updated.');
     }
 
     public function delete(int $id)
     {
         $item = $this->model->where('owner_id', session()->get('user_id'))->find($id);
-        if (! $item) return redirect()->to('/items')->with('error', 'Item not found.');
+        if (! $item) return redirect()->to($this->rolePrefix() . '/items')->with('error', 'Item not found.');
+
+        // Block only when live business depends on the item; finished history
+        // (returned/cancelled rentals, reviews) is deleted together with it.
+        $rentalModel = new RentalModel();
+        $active = $rentalModel->where('item_id', $id)
+            ->whereIn('status', ['pending', 'booked', 'ongoing', 'overdue', 'awaiting_payment'])
+            ->countAllResults();
+        if ($active > 0) {
+            return redirect()->to($this->rolePrefix() . '/items')->with('error',
+                'Cannot delete "' . $item['name'] . '" — it still has ' . $active
+                . ' active rental(s)/booking(s). Return or cancel them first.');
+        }
+
+        (new ReviewModel())->where('item_id', $id)->delete();
+        $rentalModel->where('item_id', $id)->delete();
         $this->model->delete($id);
-        return redirect()->to('/items')->with('success', 'Item deleted.');
+
+        return redirect()->to($this->rolePrefix() . '/items')->with('success', 'Item and its rental history deleted.');
     }
 }

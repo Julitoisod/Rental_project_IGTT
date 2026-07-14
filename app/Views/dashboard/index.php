@@ -110,11 +110,6 @@ $urlPrefix = match($role) {
 <div class="card-section">
     <div class="section-title d-flex align-items-center">
         <i class="bi bi-box-seam text-primary"></i> All Items
-        <?php if (in_array($role, ['snd_admin', 'owner'])): ?>
-            <a href="<?= base_url($urlPrefix . '/items/create') ?>" class="btn btn-primary btn-sm ms-auto">
-                <i class="bi bi-plus-lg"></i> Add Item
-            </a>
-        <?php endif; ?>
     </div>
 
     <?php if (session()->getFlashdata('error')): ?>

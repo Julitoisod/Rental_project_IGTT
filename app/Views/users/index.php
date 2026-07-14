@@ -3,7 +3,7 @@
 <div class="card-section">
     <div class="section-title">
         <i class="bi bi-people text-primary"></i> Users
-        <a href="<?= base_url('users/create') ?>" class="btn btn-primary btn-sm ms-auto">
+        <a href="<?= base_url(role_url_prefix() . '/users/create') ?>" class="btn btn-primary btn-sm ms-auto">
             <i class="bi bi-person-plus"></i> Add User
         </a>
     </div>
@@ -31,10 +31,10 @@
                             </span>
                         </td>
                         <td>
-                            <a href="<?= base_url('users/edit/' . $u['id']) ?>" class="btn btn-sm btn-outline-secondary">
+                            <a href="<?= base_url(role_url_prefix() . '/users/edit/' . $u['id']) ?>" class="btn btn-sm btn-outline-secondary">
                                 <i class="bi bi-pencil"></i>
                             </a>
-                            <form action="<?= base_url('users/delete/' . $u['id']) ?>" method="POST" class="d-inline"
+                            <form action="<?= base_url(role_url_prefix() . '/users/delete/' . $u['id']) ?>" method="POST" class="d-inline"
                                   data-confirm="Delete this user? This cannot be undone."
                                   data-confirm-type="danger"
                                   data-confirm-title="Delete User"

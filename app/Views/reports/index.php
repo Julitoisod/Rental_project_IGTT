@@ -3,14 +3,14 @@
 <div class="card-section mb-4">
     <div class="section-title">
         <i class="bi bi-bar-chart-line text-primary"></i> Rental Reports
-        <a href="<?= base_url('reports/export/csv?start_date=' . $startDate . '&end_date=' . $endDate) ?>"
+        <a href="<?= base_url(role_url_prefix() . '/reports/export/csv?start_date=' . $startDate . '&end_date=' . $endDate) ?>"
            class="btn btn-sm btn-success ms-auto">
             <i class="bi bi-file-earmark-spreadsheet"></i> Export CSV
         </a>
     </div>
 
     <!-- Date filter -->
-    <form class="row g-2 mb-4" method="GET" action="<?= base_url('reports') ?>">
+    <form class="row g-2 mb-4" method="GET" action="<?= base_url(role_url_prefix() . '/reports') ?>">
         <div class="col-md-3">
             <label class="form-label small fw-semibold">Start Date</label>
             <input type="date" name="start_date" class="form-control form-control-sm"
@@ -27,7 +27,7 @@
             </button>
         </div>
         <div class="col-md-2 d-flex align-items-end">
-            <a href="<?= base_url('reports') ?>" class="btn btn-outline-secondary btn-sm w-100">
+            <a href="<?= base_url(role_url_prefix() . '/reports') ?>" class="btn btn-outline-secondary btn-sm w-100">
                 <i class="bi bi-arrow-counterclockwise"></i> All Time
             </a>
         </div>

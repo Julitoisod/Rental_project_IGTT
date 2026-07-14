@@ -140,3 +140,8 @@ _modules/*
 
 /results/
 /phpunit*.xml
+
+# Local runtime/data artifacts — never publish (public repo)
+server.log
+/-w
+/writable/backup-*.sql

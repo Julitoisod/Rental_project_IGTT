@@ -118,7 +118,7 @@
             </div>
         <?php endif; ?>
 
-        <form action="<?= base_url((session()->get('role') === 'owner' ? 'owner' : 'customer') . '/profile/update') ?>" method="POST" enctype="multipart/form-data">
+        <form action="<?= base_url(role_url_prefix() . '/profile/update') ?>" method="POST" enctype="multipart/form-data">
             <?= csrf_field() ?>
 
             <div class="row g-3">
@@ -142,9 +142,9 @@
                         </div>
                         <div>
                             <input type="file" name="avatar" id="avatarInput" class="form-control form-control-sm"
-                                   accept="image/jpeg,image/png,image/webp"
+                                   accept="image/jpeg,image/png,image/gif,image/webp"
                                    onchange="previewAvatar(event)" style="max-width:260px;">
-                            <div class="text-muted" style="font-size:0.75rem; margin-top:4px;">JPG, PNG or WebP · Max 2MB</div>
+                            <div class="text-muted" style="font-size:0.75rem; margin-top:4px;">JPG, PNG, GIF or WebP · Max 5 MB</div>
                         </div>
                     </div>
                 </div>
@@ -201,9 +201,9 @@
                 <div class="col-md-6">
                     <label class="form-label fw-semibold">Upload ID Image</label>
                     <input type="file" name="valid_id" id="validIdInput" class="form-control"
-                           accept="image/jpeg,image/png,image/webp,application/pdf"
+                           accept="image/jpeg,image/png,image/gif,image/webp"
                            onchange="previewValidId(event)">
-                    <div class="text-muted" style="font-size:0.75rem; margin-top:4px;">JPG, PNG or WebP &middot; Max 5MB</div>
+                    <div class="text-muted" style="font-size:0.75rem; margin-top:4px;">JPG, PNG, GIF or WebP &middot; Max 5 MB</div>
                     <div id="ocrStatus" class="mt-2"></div>
                     <input type="hidden" name="ocr_verified" id="ocrVerifiedInput" value="0">
                 </div>
@@ -214,7 +214,7 @@
                     <div class="d-flex align-items-center gap-3">
                         <?php
                         $ext = strtolower(pathinfo($user['valid_id'], PATHINFO_EXTENSION));
-                        if (in_array($ext, ['jpg','jpeg','png','webp'])):
+                        if (in_array($ext, ['jpg','jpeg','png','gif','webp'])):
                         ?>
                             <img id="validIdPreview"
                                  src="<?= base_url('uploads/valid_ids/' . esc($user['valid_id'])) ?>"
@@ -222,7 +222,7 @@
                         <?php else: ?>
                             <a href="<?= base_url('uploads/valid_ids/' . esc($user['valid_id'])) ?>" target="_blank"
                                class="btn btn-outline-secondary btn-sm">
-                                <i class="bi bi-file-earmark-pdf me-1"></i> View PDF
+                                <i class="bi bi-file-earmark me-1"></i> View file
                             </a>
                         <?php endif; ?>
                         <div>
@@ -273,7 +273,7 @@
                     <button type="submit" class="btn btn-primary px-4">
                         <i class="bi bi-save me-1"></i> Save Changes
                     </button>
-                    <a href="<?= base_url('dashboard') ?>" class="btn btn-outline-secondary ms-2">Cancel</a>
+                    <a href="<?= base_url(role_url_prefix() . '/dashboard') ?>" class="btn btn-outline-secondary ms-2">Cancel</a>
                 </div>
             </div>
         </form>

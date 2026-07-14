@@ -120,7 +120,7 @@
                     <i class="bi bi-plus-circle text-primary me-1"></i> Create Payment Option
                 </div>
 
-                <form action="<?= base_url('payment-gateways/store') ?>" method="POST"
+                <form action="<?= base_url(role_url_prefix() . '/payment-gateways/store') ?>" method="POST"
                       enctype="multipart/form-data" id="gatewayForm">
                     <?= csrf_field() ?>
                     <input type="hidden" name="_edit_id" id="editId" value="">
@@ -208,7 +208,7 @@
                                             onclick="loadEdit(<?= $gw['id'] ?>, '<?= esc($gw['name'], 'js') ?>', '<?= esc($gw['type'], 'js') ?>', '<?= esc($gw['account_number'], 'js') ?>', '<?= $gw['qr_code'] ? base_url('uploads/qrcodes/' . $gw['qr_code']) : '' ?>')">
                                         <i class="bi bi-pencil"></i> Edit
                                     </button>
-                                    <form action="<?= base_url('payment-gateways/delete/' . $gw['id']) ?>" method="POST" class="flex-fill"
+                                    <form action="<?= base_url(role_url_prefix() . '/payment-gateways/delete/' . $gw['id']) ?>" method="POST" class="flex-fill"
                                           data-confirm="Delete this payment gateway? This cannot be undone."
                                           data-confirm-type="danger"
                                           data-confirm-title="Delete Gateway"
@@ -253,7 +253,7 @@ function loadEdit(id, name, type, account, qrUrl) {
     }
 
     // Change form action to update
-    document.getElementById('gatewayForm').action = `<?= base_url('payment-gateways/update') ?>/` + id;
+    document.getElementById('gatewayForm').action = `<?= base_url(role_url_prefix() . '/payment-gateways/update') ?>/` + id;
     document.getElementById('submitBtn').innerHTML = '<i class="bi bi-save me-1"></i> Update';
     document.getElementById('cancelEditBtn').style.display = '';
 
@@ -266,7 +266,7 @@ function resetForm() {
     document.getElementById('editId').value = '';
     document.getElementById('formMethod').value = 'POST';
     document.getElementById('gatewayForm').reset();
-    document.getElementById('gatewayForm').action = '<?= base_url('payment-gateways/store') ?>';
+    document.getElementById('gatewayForm').action = '<?= base_url(role_url_prefix() . '/payment-gateways/store') ?>';
     document.getElementById('submitBtn').innerHTML = '<i class="bi bi-save me-1"></i> Save';
     document.getElementById('cancelEditBtn').style.display = 'none';
     document.getElementById('qrPreviewWrap').style.display = 'none';

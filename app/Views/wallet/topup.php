@@ -42,7 +42,7 @@
         <i class="bi bi-upload text-primary"></i> Step 2 — Submit Your Request
     </div>
 
-    <form method="POST" action="<?= base_url('wallet/topup') ?>" enctype="multipart/form-data">
+    <form method="POST" action="<?= base_url(role_url_prefix() . '/wallet/topup') ?>" enctype="multipart/form-data">
         <?= csrf_field() ?>
 
         <div class="mb-3">
@@ -85,7 +85,7 @@
             <button type="submit" class="btn btn-primary px-4">
                 <i class="bi bi-send me-1"></i> Submit Request
             </button>
-            <a href="<?= base_url('wallet') ?>" class="btn btn-outline-secondary">Cancel</a>
+            <a href="<?= base_url(role_url_prefix() . '/wallet') ?>" class="btn btn-outline-secondary">Cancel</a>
         </div>
     </form>
 </div>

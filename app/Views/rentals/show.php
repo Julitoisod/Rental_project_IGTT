@@ -6,12 +6,12 @@
         <i class="bi bi-receipt text-primary"></i> Rental Detail #<?= $rental['id'] ?>
         <div class="ms-auto d-flex gap-2">
             <?php if (in_array(session()->get('role'), ['snd_admin', 'owner'])): ?>
-                <a href="<?= base_url('users/' . $rental['user_id'] . '/profile?from_rental=' . $rental['id']) ?>"
+                <a href="<?= base_url(role_url_prefix() . '/users/' . $rental['user_id'] . '/profile?from_rental=' . $rental['id']) ?>"
                    class="btn btn-sm btn-outline-primary">
                     <i class="bi bi-person-badge me-1"></i> View Customer Profile
                 </a>
             <?php endif; ?>
-            <a href="<?= base_url('rentals') ?>" class="btn btn-sm btn-outline-secondary">
+            <a href="<?= base_url(role_url_prefix() . '/rentals') ?>" class="btn btn-sm btn-outline-secondary">
                 <i class="bi bi-arrow-left"></i> Back
             </a>
         </div>
@@ -53,11 +53,11 @@
     <?php if (in_array(session()->get('role'), ['snd_admin', 'owner'])): ?>
         <div class="d-flex gap-2 mt-3">
             <?php if ($rental['status'] === 'booked'): ?>
-                <form action="<?= base_url('rentals/' . $rental['id'] . '/activate') ?>" method="POST">
+                <form action="<?= base_url(role_url_prefix() . '/rentals/' . $rental['id'] . '/activate') ?>" method="POST">
                     <?= csrf_field() ?>
                     <button class="btn btn-success"><i class="bi bi-play-fill"></i> Activate / Confirm</button>
                 </form>
-                <form action="<?= base_url('rentals/' . $rental['id'] . '/cancel-booking') ?>" method="POST"
+                <form action="<?= base_url(role_url_prefix() . '/rentals/' . $rental['id'] . '/cancel-booking') ?>" method="POST"
                       data-confirm="Cancel this booking? This cannot be undone."
                       data-confirm-type="danger"
                       data-confirm-title="Cancel Booking"
@@ -67,13 +67,13 @@
                 </form>
             <?php endif; ?>
             <?php if ($rental['status'] === 'pending'): ?>
-                <form action="<?= base_url('rentals/' . $rental['id'] . '/activate') ?>" method="POST">
+                <form action="<?= base_url(role_url_prefix() . '/rentals/' . $rental['id'] . '/activate') ?>" method="POST">
                     <?= csrf_field() ?>
                     <button class="btn btn-success"><i class="bi bi-play-fill"></i> Activate</button>
                 </form>
             <?php endif; ?>
             <?php if (in_array($rental['status'], ['ongoing', 'overdue'])): ?>
-                <a href="<?= base_url('rentals/' . $rental['id'] . '/return') ?>"
+                <a href="<?= base_url(role_url_prefix() . '/rentals/' . $rental['id'] . '/return') ?>"
                    class="btn btn-warning">
                     <i class="bi bi-box-arrow-in-left"></i> Process Return
                 </a>
@@ -99,7 +99,7 @@
             <?php endif; ?>
             <small class="text-muted"><?= date('M d, Y', strtotime($review['created_at'])) ?></small>
             <?php if (in_array(session()->get('role'), ['snd_admin', 'owner'])): ?>
-                <form action="<?= base_url('reviews/delete/' . $review['id']) ?>" method="POST" class="d-inline ms-2"
+                <form action="<?= base_url(role_url_prefix() . '/reviews/delete/' . $review['id']) ?>" method="POST" class="d-inline ms-2"
                       data-confirm="Delete this review permanently?"
                       data-confirm-type="danger"
                       data-confirm-title="Delete Review"
@@ -116,7 +116,7 @@
             <?php if (session()->getFlashdata('error')): ?>
                 <div class="alert alert-danger py-2"><?= session()->getFlashdata('error') ?></div>
             <?php endif; ?>
-            <form action="<?= base_url('customer/reviews/store/' . $rental['id']) ?>" method="POST">
+            <form action="<?= base_url(role_url_prefix() . '/reviews/store/' . $rental['id']) ?>" method="POST">
                 <?= csrf_field() ?>
                 <!-- Star picker -->
                 <div class="mb-3">

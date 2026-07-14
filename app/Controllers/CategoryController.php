@@ -35,13 +35,13 @@ class CategoryController extends BaseController
         }
 
         $this->model->save(['name' => $this->request->getPost('name')]);
-        return redirect()->to('/categories')->with('success', 'Category added.');
+        return redirect()->to($this->rolePrefix() . '/categories')->with('success', 'Category added.');
     }
 
     public function edit(int $id)
     {
         $cat = $this->model->find($id);
-        if (! $cat) return redirect()->to('/categories')->with('error', 'Category not found.');
+        if (! $cat) return redirect()->to($this->rolePrefix() . '/categories')->with('error', 'Category not found.');
 
         return view('categories/edit', ['pageTitle' => 'Edit Category', 'category' => $cat]);
     }
@@ -53,12 +53,12 @@ class CategoryController extends BaseController
         }
 
         $this->model->update($id, ['name' => $this->request->getPost('name')]);
-        return redirect()->to('/categories')->with('success', 'Category updated.');
+        return redirect()->to($this->rolePrefix() . '/categories')->with('success', 'Category updated.');
     }
 
     public function delete(int $id)
     {
         $this->model->delete($id);
-        return redirect()->to('/categories')->with('success', 'Category deleted.');
+        return redirect()->to($this->rolePrefix() . '/categories')->with('success', 'Category deleted.');
     }
 }

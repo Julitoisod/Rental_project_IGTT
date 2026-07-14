@@ -45,7 +45,7 @@
 <div class="card-section">
     <div class="section-title d-flex align-items-center">
         <i class="bi bi-bell-fill text-primary"></i> Notifications
-        <form action="<?= base_url('notifications/mark-all-read') ?>" method="POST" class="ms-auto">
+        <form action="<?= base_url(role_url_prefix() . '/notifications/mark-all-read') ?>" method="POST" class="ms-auto">
             <?= csrf_field() ?>
             <button type="submit" class="btn btn-sm btn-outline-primary">
                 <i class="bi bi-check-all"></i> Mark All as Read
@@ -68,7 +68,7 @@
         ];
         ?>
         <?php foreach ($notifications as $n): ?>
-            <a href="<?= base_url('notifications/read/' . $n['id']) ?>"
+            <a href="<?= base_url(role_url_prefix() . '/notifications/read/' . $n['id']) ?>"
                class="notif-page-item <?= $n['is_read'] ? '' : 'unread' ?> <?= esc($n['type']) ?>">
 
                 <div class="notif-icon-lg <?= esc($n['type']) ?>">

@@ -661,8 +661,8 @@ $urlPrefix = match($role) {
 
         <?php if (in_array($role, ['snd_admin', 'owner'])): ?>
             <div class="nav-section">Rental Management</div>
-            <a href="<?= base_url($urlPrefix . '/dashboard') ?>" class="<?= str_contains(current_url(), '/dashboard') ? 'active' : '' ?>">
-                <i class="bi bi-box-seam"></i> All Items
+            <a href="<?= base_url($urlPrefix . '/items') ?>" class="<?= str_contains(current_url(), '/items') ? 'active' : '' ?>">
+                <i class="bi bi-box-seam"></i> Manage Items
             </a>
             <a href="<?= base_url($urlPrefix . '/rentals') ?>" class="<?= str_contains(current_url(), '/rentals') ? 'active' : '' ?>">
                 <i class="bi bi-clipboard-check"></i> Rentals

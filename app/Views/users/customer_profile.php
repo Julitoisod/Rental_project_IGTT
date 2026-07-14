@@ -33,11 +33,11 @@
             <div class="text-end">
                 <div class="text-muted small"><i class="bi bi-calendar3 me-1"></i> Joined <?= date('M d, Y', strtotime($user['created_at'])) ?></div>
                 <?php if ($fromRental): ?>
-                    <a href="<?= base_url('rentals/' . $fromRental) ?>" class="btn btn-sm btn-outline-secondary mt-2">
+                    <a href="<?= base_url(role_url_prefix() . '/rentals/' . $fromRental) ?>" class="btn btn-sm btn-outline-secondary mt-2">
                         <i class="bi bi-arrow-left"></i> Back to Rental
                     </a>
                 <?php else: ?>
-                    <a href="<?= base_url('rentals') ?>" class="btn btn-sm btn-outline-secondary mt-2">
+                    <a href="<?= base_url(role_url_prefix() . '/rentals') ?>" class="btn btn-sm btn-outline-secondary mt-2">
                         <i class="bi bi-arrow-left"></i> Back
                     </a>
                 <?php endif; ?>
@@ -105,14 +105,14 @@
                     <div class="text-muted fst-italic">Check that the name on the ID image above matches the account name before verifying.</div>
                 </div>
                 <?php if ($lineOk): ?>
-                    <form action="<?= base_url('users/' . $user['id'] . '/unverify-id') ?>" method="POST">
+                    <form action="<?= base_url(role_url_prefix() . '/users/' . $user['id'] . '/unverify-id') ?>" method="POST">
                         <?= csrf_field() ?>
                         <button class="btn btn-sm btn-outline-danger">
                             <i class="bi bi-x-circle me-1"></i> Remove Verification
                         </button>
                     </form>
                 <?php else: ?>
-                    <form action="<?= base_url('users/' . $user['id'] . '/verify-id') ?>" method="POST">
+                    <form action="<?= base_url(role_url_prefix() . '/users/' . $user['id'] . '/verify-id') ?>" method="POST">
                         <?= csrf_field() ?>
                         <button class="btn btn-success">
                             <i class="bi bi-patch-check-fill me-1"></i> Verify ID
@@ -164,7 +164,7 @@
             <div class="d-flex align-items-start gap-4 flex-wrap">
                 <?php
                 $ext = strtolower(pathinfo($user['valid_id'], PATHINFO_EXTENSION));
-                if (in_array($ext, ['jpg','jpeg','png','webp'])):
+                if (in_array($ext, ['jpg','jpeg','png','gif','webp'])):
                 ?>
                     <a href="<?= base_url('uploads/valid_ids/' . esc($user['valid_id'])) ?>" target="_blank">
                         <img src="<?= base_url('uploads/valid_ids/' . esc($user['valid_id'])) ?>"

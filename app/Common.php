@@ -13,3 +13,19 @@
  *
  * @see: https://codeigniter.com/user_guide/extending/common.html
  */
+
+if (! function_exists('role_url_prefix')) {
+    /**
+     * URL prefix for the logged-in role's route group (e.g. '/owner').
+     * Views use this to build links that stay inside the role's section.
+     */
+    function role_url_prefix(): string
+    {
+        return match (session()->get('role')) {
+            'snd_admin' => '/admin',
+            'owner'     => '/owner',
+            'customer'  => '/customer',
+            default     => '',
+        };
+    }
+}

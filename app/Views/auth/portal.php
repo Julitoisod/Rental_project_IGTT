@@ -1,617 +1,624 @@
-﻿<!DOCTYPE html>
+<?php
+// ── Shared view helpers ──────────────────────────────────────────
+if (!function_exists('portal_stars')) {
+    /** Render a 5-star rating as bootstrap icons. */
+    function portal_stars(float $avg): string
+    {
+        $out = '';
+        for ($i = 1; $i <= 5; $i++) {
+            if ($avg >= $i - 0.25) {
+                $out .= '<i class="bi bi-star-fill"></i>';
+            } elseif ($avg >= $i - 0.75) {
+                $out .= '<i class="bi bi-star-half"></i>';
+            } else {
+                $out .= '<i class="bi bi-star"></i>';
+            }
+        }
+        return $out;
+    }
+}
+
+/** Resolve display price + unit (flat price column, else JSON rate options). */
+$displayPriceOf = static function (array $item): array {
+    $price = (float) ($item['price'] ?? 0);
+    $unit  = '/day';
+    if ($price <= 0) {
+        foreach (['rate_option_1', 'rate_option_2'] as $key) {
+            $opt = json_decode($item[$key] ?? '{}', true);
+            if (is_array($opt) && (float) ($opt['price'] ?? 0) > 0) {
+                $price = (float) $opt['price'];
+                $unit  = !empty($opt['hours']) ? '/' . (int) $opt['hours'] . 'hrs' : '';
+                break;
+            }
+        }
+    }
+    return [$price, $unit];
+};
+
+$ratings    = $ratings    ?? [];
+$rentCounts = $rentCounts ?? [];
+$isFiltered = !empty($searchQ) || !empty($activeCat);
+
+// Hero collage: up to 3 real item photos
+$heroPhotos = [];
+foreach (array_merge($recommendedItems ?? [], $items) as $hi) {
+    if (!empty($hi['image']) && !in_array($hi['image'], array_column($heroPhotos, 'image'), true)) {
+        $heroPhotos[] = $hi;
+        if (count($heroPhotos) === 3) break;
+    }
+}
+?>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>IGTT — Browse Items</title>
+    <title>IGTT Rentals — Browse &amp; Rent Equipment</title>
+    <meta name="description" content="Browse rental equipment from Islands Getaway Travel and Tours. Compare prices, check availability, and book online.">
     <link rel="icon" type="image/png" href="<?= base_url('img/logo.png') ?>">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Instrument+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <style>
         :root {
             --primary: #9c0b09;
             --primary-dark: #7a0807;
-            --primary-light: #b80d0b;
-            --accent: #ffffff;
-            --accent-dark: #f0f0f0;
+            --primary-deeper: #5e0605;
+            --primary-tint: #fdf1f1;
             --white: #ffffff;
-            --light: #ffffff;
-            --gray-100: #f8f8f8;
-            --gray-200: #eee;
-            --gray-300: #ddd;
-            --gray-500: #888;
-            --gray-700: #444;
-            --gray-900: #222;
+            --page-bg: #f4f4f6;
+            --line: #e7e7ec;
+            --ink: #1d1d22;
+            --muted: #5c5c66;
+            --star: #f6a723;
+            --ok: #1b7c3d;
+            --radius: 12px;
+            --z-sticky: 100;
         }
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-        html, body { margin: 0 !important; padding: 0 !important; }
-        body { background: var(--light); font-family: 'Outfit', 'Segoe UI', sans-serif; min-height: 100vh; padding-top: 72px; color: var(--gray-900); scroll-behavior: smooth; }
+        html { scroll-behavior: smooth; }
+        body { background: var(--page-bg); font-family: 'Outfit', 'Segoe UI', sans-serif; color: var(--ink); min-height: 100vh; }
+        img { max-width: 100%; }
+        .wrap { max-width: 1200px; margin: 0 auto; padding: 0 16px; }
 
-        /* ── Animations ── */
-        @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-        @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.05); } }
-        @keyframes shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
-        .fade-in { animation: fadeInUp 0.6s ease-out forwards; }
-        .delay-1 { animation-delay: 0.1s; }
-        .delay-2 { animation-delay: 0.2s; }
-        .delay-3 { animation-delay: 0.3s; }
-        .delay-4 { animation-delay: 0.4s; }
-
-        /* ── Navbar ── */
-        .snd-navbar {
-            position: fixed; top: 0; left: 0; right: 0; z-index: 200;
-            background: var(--primary);
-            padding: 0 24px; display: flex; align-items: center; gap: 16px;
-            height: 72px; box-shadow: 0 4px 20px rgba(156,11,9,0.3);
+        /* Motion never gates visibility: transform only, content readable at every frame */
+        @keyframes riseIn { from { transform: translateY(16px); } to { transform: translateY(0); } }
+        .rise { animation: riseIn .55s cubic-bezier(.22,1,.36,1) both; }
+        .rise-2 { animation-delay: .12s; }
+        .rise-3 { animation-delay: .24s; }
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after { animation: none !important; transition: none !important; }
         }
-        .snd-brand { display: flex; align-items: center; gap: 10px; text-decoration: none; flex-shrink: 0; }
-        .snd-brand img { width: 48px; height: 48px; border-radius: 0; object-fit: contain; background: transparent; padding: 2px; }
-        .snd-brand span { color: var(--white); font-size: 1.15rem; font-weight: 800; white-space: nowrap; letter-spacing: -0.5px; }
-        .nav-divider { width: 1px; height: 32px; background: rgba(255,255,255,0.3); flex-shrink: 0; }
-        .snd-search { flex: 1; max-width: 520px; display: flex; border-radius: 12px; overflow: hidden; background: var(--white); box-shadow: 0 2px 12px rgba(0,0,0,0.15); }
-        .snd-search input { flex: 1; border: none; padding: 0 16px; font-size: 0.9rem; outline: none; color: var(--gray-900); height: 44px; }
-        .snd-search button { background: var(--accent); border: none; padding: 0 20px; color: var(--primary); font-size: 1.1rem; cursor: pointer; transition: all 0.2s; }
-        .snd-search button:hover { background: var(--accent-dark); }
-        .nav-actions { display: flex; align-items: center; gap: 10px; margin-left: auto; flex-shrink: 0; }
-        .nav-btn { padding: 10px 20px; border-radius: 10px; font-size: 0.85rem; font-weight: 700; text-decoration: none; transition: all 0.2s; white-space: nowrap; }
-        .nav-btn-outline { background: transparent; border: 2px solid var(--accent); color: var(--accent); }
-        .nav-btn-outline:hover { background: var(--accent); color: var(--primary); }
-        .nav-btn-solid { background: var(--accent); color: var(--primary); }
-        .nav-btn-solid:hover { background: var(--accent-dark); }
 
-        /* ── Sub-nav ── */
-        .sub-nav { background: var(--primary-dark); display: flex; align-items: center; gap: 4px; padding: 0 24px; height: 44px; overflow-x: auto; scrollbar-width: none; }
-        .sub-nav::-webkit-scrollbar { display: none; }
-        .sub-nav a { color: rgba(255,255,255,0.75); font-size: 0.78rem; text-decoration: none; padding: 0 14px; height: 44px; display: flex; align-items: center; gap: 6px; white-space: nowrap; transition: all 0.2s; border-bottom: 3px solid transparent; }
-        .sub-nav a:hover { color: var(--accent); border-bottom-color: var(--accent); }
-        .sub-nav .sep { color: rgba(255,255,255,0.25); font-size: 0.7rem; }
+        /* ── Utility strip ── */
+        .util-strip { background: var(--primary-deeper); color: rgba(255,255,255,.85); font-size: .74rem; }
+        .util-inner { max-width: 1200px; margin: 0 auto; padding: 0 16px; height: 34px; display: flex; align-items: center; gap: 16px; }
+        .util-inner a { color: rgba(255,255,255,.85); text-decoration: none; display: inline-flex; align-items: center; gap: 5px; }
+        .util-inner a:hover { color: var(--white); }
+        .util-right { margin-left: auto; display: flex; gap: 16px; }
 
-        /* ── Hero ── */
-        .hero { background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%); padding: 48px 24px; position: relative; overflow: hidden; }
-        .hero::before { content: ''; position: absolute; inset: 0; background: url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M50 50 L50 0 L100 50 Z' fill='%23ffffff' fill-opacity='0.08'/%3E%3Ccircle cx='0' cy='100' r='30' fill='%23ffffff' fill-opacity='0.05'/%3E%3Crect x='80' y='20' width='40' height='40' fill='%23ffffff' fill-opacity='0.05' transform='rotate(45 100 40)'/%3E%3C/svg%3E"); }
-        .hero-inner { max-width: 1200px; margin: 0 auto; display: flex; align-items: center; gap: 24px; position: relative; }
-        .hero-logo-wrap img { width: 100%; height: 100%; border-radius: 0; object-fit: contain; }
-        .hero-text h1 { color: var(--white); font-size: 1.8rem; font-weight: 800; margin-bottom: 6px; letter-spacing: -0.5px; animation: slideInUp 0.8s ease both; }
-        .hero-text p { color: rgba(255,255,255,0.8); font-size: 0.9rem; max-width: 400px; animation: slideInUp 0.8s ease 0.3s both; }
-        .hero-badges { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; animation: slideInUp 0.8s ease 0.5s both; }
+        /* ── Navbar (sticky) ── */
+        .shop-header { position: sticky; top: 0; z-index: var(--z-sticky); background: var(--primary); box-shadow: 0 3px 14px rgba(94,6,5,.35); }
+        .shop-nav { max-width: 1200px; margin: 0 auto; padding: 12px 16px; display: flex; align-items: center; gap: 18px; flex-wrap: wrap; }
+        .shop-brand { display: flex; align-items: center; gap: 10px; text-decoration: none; }
+        .shop-brand img { width: 44px; height: 44px; object-fit: contain; }
+        .shop-brand b { color: var(--white); font-size: 1.2rem; font-weight: 800; letter-spacing: -.3px; white-space: nowrap; }
+        .shop-brand small { display: block; color: rgba(255,255,255,.75); font-size: .62rem; font-weight: 600; letter-spacing: .4px; }
+        .shop-search { flex: 1 1 300px; display: flex; background: var(--white); border-radius: 8px; overflow: hidden; min-width: 0; }
+        .shop-search input { flex: 1; min-width: 0; border: 0; outline: 0; height: 42px; padding: 0 14px; font: inherit; font-size: .9rem; color: var(--ink); }
+        .shop-search input::placeholder { color: #757580; }
+        .shop-search button { border: 0; cursor: pointer; background: var(--primary-dark); color: var(--white); padding: 0 22px; font-size: 1.05rem; transition: background .15s; }
+        .shop-search button:hover { background: var(--primary-deeper); }
+        .shop-actions { display: flex; gap: 10px; margin-left: auto; }
+        .btn-nav { display: inline-flex; align-items: center; gap: 6px; padding: 10px 18px; border-radius: 8px; font-size: .84rem; font-weight: 700; text-decoration: none; white-space: nowrap; transition: transform .15s, background .15s, color .15s; }
+        .btn-nav:active { transform: scale(.97); }
+        .btn-nav.ghost { color: var(--white); border: 2px solid rgba(255,255,255,.85); }
+        .btn-nav.ghost:hover { background: var(--white); color: var(--primary); }
+        .btn-nav.solid { background: var(--white); color: var(--primary); }
+        .btn-nav.solid:hover { background: #ffe9e9; }
 
-        @keyframes slideInUp {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-        @keyframes fadeInScale {
-            from { opacity: 0; transform: scale(0.8); }
-            to { opacity: 1; transform: scale(1); }
-        }
-        .hero-logo-wrap { width: 90px; height: 90px; border-radius: 0; background: transparent; display: flex; align-items: center; justify-content: center; flex-shrink: 0; animation: fadeInScale 0.6s ease both; }
-        .hero-badge { background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.25); border-radius: 20px; padding: 4px 12px; color: var(--white); font-size: 0.7rem; font-weight: 600; display: flex; align-items: center; gap: 5px; backdrop-filter: blur(4px); }
-        /* ── Category Tabs ── */
-        .cat-bar { background: var(--white); box-shadow: 0 2px 12px rgba(0,0,0,0.06); overflow-x: auto; scrollbar-width: none; }
-        .cat-bar::-webkit-scrollbar { display: none; }
-        .cat-inner { display: flex; max-width: 1200px; margin: 0 auto; padding: 0 16px; }
-        .cat-tab { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 14px 20px 12px; text-decoration: none; color: var(--gray-700); font-size: 0.75rem; font-weight: 700; border-bottom: 4px solid transparent; white-space: nowrap; transition: all 0.2s; flex-shrink: 0; }
-        .cat-tab:hover, .cat-tab.active { color: var(--primary); border-bottom-color: var(--primary); }
-        .cat-tab .cat-icon { width: 44px; height: 44px; border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; background: var(--gray-100); transition: all 0.2s; }
-        .cat-tab.active .cat-icon { background: var(--primary); color: var(--white); box-shadow: 0 4px 12px rgba(156,11,9,0.3); }
+        /* ── Category rail ── */
+        .cat-rail { background: var(--white); border-bottom: 1px solid var(--line); overflow-x: auto; scrollbar-width: none; }
+        .cat-rail::-webkit-scrollbar { display: none; }
+        .cat-rail-inner { max-width: 1200px; margin: 0 auto; padding: 10px 16px; display: flex; gap: 6px; }
+        .cat-chip { display: inline-flex; align-items: center; gap: 7px; padding: 8px 16px; border-radius: 999px; border: 1.5px solid var(--line); background: var(--white); color: var(--ink); font-size: .8rem; font-weight: 600; text-decoration: none; white-space: nowrap; transition: border-color .15s, background .15s, color .15s; }
+        .cat-chip:hover { border-color: var(--primary); color: var(--primary); }
+        .cat-chip.active { background: var(--primary); border-color: var(--primary); color: var(--white); }
 
-        /* ── Filter Bar ── */
-        .filter-bar { background: var(--white); border-bottom: 1px solid var(--gray-200); padding: 12px 0; }
-        .filter-inner { max-width: 1200px; margin: 0 auto; padding: 0 16px; display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
-        .filter-label { font-size: 0.75rem; font-weight: 700; color: var(--gray-500); white-space: nowrap; text-transform: uppercase; letter-spacing: 0.5px; }
-        .avail-toggle { display: flex; border: 2px solid var(--gray-200); border-radius: 10px; overflow: hidden; }
-        .avail-toggle a { padding: 6px 14px; font-size: 0.75rem; font-weight: 700; color: var(--gray-700); text-decoration: none; background: var(--white); transition: all 0.18s; white-space: nowrap; }
+        /* ── Hero banner ── */
+        .hero-zone { padding: 20px 0 8px; }
+        .hero-banner { background: linear-gradient(120deg, var(--primary) 30%, var(--primary-dark)); border-radius: 16px; padding: 34px 36px; display: flex; align-items: center; gap: 28px; overflow: hidden; position: relative; }
+        .hero-copy { flex: 1 1 340px; position: relative; }
+        .hero-copy h1 { color: var(--white); font-size: clamp(1.5rem, 1.1rem + 2vw, 2.3rem); font-weight: 800; line-height: 1.15; letter-spacing: -.02em; text-wrap: balance; margin-bottom: 10px; }
+        .hero-copy p { color: rgba(255,255,255,.88); font-size: .95rem; max-width: 46ch; margin-bottom: 18px; }
+        .hero-ctas { display: flex; gap: 10px; flex-wrap: wrap; }
+        .btn-hero { display: inline-flex; align-items: center; gap: 8px; padding: 12px 22px; border-radius: 9px; font-weight: 700; font-size: .88rem; text-decoration: none; transition: transform .15s; }
+        .btn-hero:hover { transform: translateY(-2px); }
+        .btn-hero.light { background: var(--white); color: var(--primary); }
+        .btn-hero.line { border: 2px solid rgba(255,255,255,.9); color: var(--white); }
+        .hero-collage { display: flex; gap: 12px; flex: 0 1 380px; }
+        .hero-collage a { display: block; border-radius: 12px; overflow: hidden; background: rgba(255,255,255,.12); flex: 1; aspect-ratio: 3/4; box-shadow: 0 10px 30px rgba(0,0,0,.28); }
+        .hero-collage a:nth-child(2) { transform: translateY(14px); }
+        .hero-collage img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform .35s; }
+        .hero-collage a:hover img { transform: scale(1.06); }
+
+        /* ── Trust strip ── */
+        .trust-strip { padding: 14px 0 4px; }
+        .trust-inner { background: var(--white); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 20px; display: flex; align-items: center; justify-content: space-between; gap: 18px; flex-wrap: wrap; }
+        .trust-item { display: flex; align-items: center; gap: 10px; font-size: .8rem; font-weight: 600; color: var(--ink); }
+        .trust-item i { color: var(--primary); font-size: 1.15rem; }
+        .trust-item small { display: block; font-weight: 500; color: var(--muted); font-size: .72rem; }
+
+        /* ── Sections ── */
+        section { padding: 26px 0 6px; }
+        .sec-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+        .sec-head h2 { font-size: 1.25rem; font-weight: 800; letter-spacing: -.01em; }
+        .sec-head .count { font-size: .8rem; color: var(--muted); font-weight: 600; }
+
+        /* ── Filter bar ── */
+        .filter-bar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; background: var(--white); border: 1px solid var(--line); border-radius: var(--radius); padding: 10px 14px; margin-bottom: 16px; }
+        .filter-bar .lbl { font-size: .74rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .4px; }
+        .avail-toggle { display: flex; border: 1.5px solid var(--line); border-radius: 8px; overflow: hidden; }
+        .avail-toggle a { padding: 7px 14px; font-size: .78rem; font-weight: 700; color: var(--ink); text-decoration: none; background: var(--white); white-space: nowrap; transition: background .15s; }
         .avail-toggle a.active { background: var(--primary); color: var(--white); }
-        .avail-toggle a:not(.active):hover { background: var(--gray-100); }
-        .sort-select { border: 2px solid var(--gray-200); border-radius: 10px; padding: 6px 12px; font-size: 0.75rem; font-weight: 700; color: var(--gray-900); background: var(--white); cursor: pointer; outline: none; }
-        .sort-select:focus { border-color: var(--primary); }
-        .filter-sep { width: 1px; height: 24px; background: var(--gray-200); flex-shrink: 0; }
-        .active-filters { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
-        .filter-chip { background: var(--accent); color: var(--primary); border-radius: 20px; padding: 4px 12px; font-size: 0.7rem; font-weight: 700; display: flex; align-items: center; gap: 5px; }
-        .filter-chip a { color: var(--primary); text-decoration: none; font-size: 0.75rem; line-height: 1; }
-        .filter-chip a:hover { color: var(--primary-dark); }
+        .avail-toggle a:not(.active):hover { background: var(--primary-tint); }
+        .sort-select { border: 1.5px solid var(--line); border-radius: 8px; padding: 7px 10px; font: inherit; font-size: .78rem; font-weight: 700; color: var(--ink); background: var(--white); cursor: pointer; }
+        .sort-select:focus { outline: 2px solid var(--primary); outline-offset: 1px; }
+        .chip { background: var(--primary-tint); color: var(--primary); border-radius: 999px; padding: 5px 12px; font-size: .74rem; font-weight: 700; display: inline-flex; align-items: center; gap: 6px; }
+        .chip a { color: var(--primary); text-decoration: none; line-height: 1; font-size: .85rem; }
 
-        /* ── Page Wrap ── */
-        .page-wrap { max-width: 1200px; margin: 0 auto; padding: 32px 16px 56px; }
-        .section-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
-        .section-title { font-size: 1.15rem; font-weight: 800; color: var(--gray-900); display: flex; align-items: center; gap: 8px; }
-        .section-title span.accent { display: inline-block; width: 5px; height: 22px; background: var(--primary); border-radius: 3px; }
+        /* ── Product cards ── */
+        .prod-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 14px; }
+        .prod-card { background: var(--white); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; text-decoration: none; color: inherit; display: flex; flex-direction: column; transition: transform .2s cubic-bezier(.22,1,.36,1), box-shadow .2s; }
+        .prod-card:hover { transform: translateY(-4px); box-shadow: 0 12px 28px rgba(29,29,34,.12); border-color: #d9d9e0; }
+        .prod-img { aspect-ratio: 1/1; background: #fafafa; position: relative; overflow: hidden; }
+        .prod-img img { width: 100%; height: 100%; object-fit: cover; transition: transform .35s; }
+        .prod-card:hover .prod-img img { transform: scale(1.05); }
+        .prod-img .noimg { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; color: #c9c9d2; font-size: 2.4rem; }
+        .flag { position: absolute; top: 8px; left: 8px; font-size: .62rem; font-weight: 800; letter-spacing: .4px; text-transform: uppercase; padding: 4px 9px; border-radius: 6px; color: var(--white); background: var(--ok); }
+        .flag.out { background: #6e6e78; }
+        .prod-body { padding: 12px 12px 14px; display: flex; flex-direction: column; gap: 5px; flex: 1; }
+        .prod-name { font-size: .86rem; font-weight: 700; line-height: 1.35; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; min-height: 2.3em; }
+        .prod-cat { font-size: .7rem; color: var(--muted); font-weight: 600; }
+        .prod-rate { display: flex; align-items: center; gap: 6px; font-size: .72rem; color: var(--muted); }
+        .prod-rate .stars { color: var(--star); font-size: .72rem; letter-spacing: 1px; }
+        .prod-price { margin-top: auto; padding-top: 4px; font-size: 1.05rem; font-weight: 800; color: var(--primary); }
+        .prod-price .unit { font-size: .7rem; font-weight: 600; color: var(--muted); }
+        .prod-meta { display: flex; justify-content: space-between; font-size: .7rem; color: var(--muted); font-weight: 600; }
+        .empty-state { text-align: center; padding: 70px 20px; color: var(--muted); background: var(--white); border: 1px dashed var(--line); border-radius: var(--radius); }
+        .empty-state i { font-size: 3rem; display: block; margin-bottom: 12px; color: #c9c9d2; }
 
-        /* ── Item Grid ── */
-        .item-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 16px; }
-        .item-card { background: var(--white); border-radius: 16px; overflow: hidden; box-shadow: 0 2px 12px rgba(0,0,0,0.06); transition: all 0.25s; cursor: pointer; text-decoration: none; color: inherit; display: flex; flex-direction: column; border: 2px solid transparent; }
-        .item-card:hover { transform: translateY(-6px); box-shadow: 0 16px 40px rgba(156,11,9,0.15); border-color: var(--accent); color: inherit; }
-        .item-img-wrap { width: 100%; aspect-ratio: 1/1; overflow: hidden; background: linear-gradient(135deg, var(--gray-100), var(--white)); position: relative; }
-        .item-img-wrap img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.4s; }
-        .item-card:hover .item-img-wrap img { transform: scale(1.08); }
-        .item-badge { position: absolute; top: 10px; left: 10px; background: var(--primary); color: var(--white); font-size: 0.65rem; font-weight: 800; padding: 4px 10px; border-radius: 8px; box-shadow: 0 2px 8px rgba(156,11,9,0.3); text-transform: uppercase; letter-spacing: 0.5px; }
-        .item-badge.out { background: var(--gray-500); }
-        .no-img-placeholder { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, var(--gray-100), var(--white)); color: var(--gray-300); font-size: 2.5rem; }
-        .item-info { padding: 14px 12px; flex: 1; display: flex; flex-direction: column; }
-        .item-name { font-size: 0.85rem; font-weight: 700; color: var(--gray-900); line-height: 1.4; margin-bottom: 6px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-        .item-category { font-size: 0.68rem; color: var(--gray-500); margin-bottom: 8px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.3px; }
-        .item-price { font-size: 1rem; font-weight: 800; color: var(--primary); margin-top: auto; }
-        .item-price .unit { font-size: 0.7rem; font-weight: 600; color: var(--gray-700); margin-left: 2px; }
-        .item-qty { font-size: 0.68rem; color: var(--gray-500); margin-top: 4px; font-weight: 600; }
-        .empty-state { text-align: center; padding: 80px 20px; color: var(--gray-500); }
-        .empty-state i { font-size: 3.5rem; margin-bottom: 16px; display: block; color: var(--gray-300); }
-        .empty-state p { font-size: 0.95rem; }
+        /* ── Featured rail ── */
+        .feat-rail { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(200px, 230px); gap: 14px; overflow-x: auto; padding-bottom: 8px; scrollbar-width: thin; }
 
-        /* ── Shared Section ── */
-        .s-wrap { padding: 48px 24px; }
-        .s-wrap-white { background: var(--white); }
-        .s-inner { max-width: 1200px; margin: 0 auto; }
-        .s-head { text-align: center; margin-bottom: 28px; }
-        .s-tag { display: inline-block; background: var(--accent); color: var(--primary); font-size: 0.7rem; font-weight: 800; padding: 5px 14px; border-radius: 20px; margin-bottom: 8px; letter-spacing: 1px; text-transform: uppercase; box-shadow: 0 2px 8px rgba(156,11,9,0.2); }
-        .s-head h2 { font-size: 1.4rem; font-weight: 800; color: var(--gray-900); margin-bottom: 6px; letter-spacing: -0.3px; }
-        .s-head p { font-size: 0.85rem; color: var(--gray-500); }
+        /* ── Reviews rail ── */
+        .rev-rail { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(250px, 300px); gap: 14px; overflow-x: auto; padding-bottom: 8px; scrollbar-width: thin; }
+        .rev-card { background: var(--white); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px; display: flex; flex-direction: column; gap: 8px; }
+        .rev-top { display: flex; align-items: center; gap: 10px; }
+        .rev-ava { width: 38px; height: 38px; border-radius: 50%; background: var(--primary-tint); color: var(--primary); font-weight: 800; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+        .rev-name { font-size: .82rem; font-weight: 700; }
+        .rev-item { font-size: .7rem; color: var(--muted); font-weight: 600; }
+        .rev-stars { color: var(--star); font-size: .75rem; letter-spacing: 1.5px; }
+        .rev-text { font-size: .8rem; color: #3c3c44; line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
 
-        /* ── How It Works ── */
-        .hiw-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; }
-        .hiw-step { text-align: center; padding: 20px 16px; position: relative; background: var(--white); border-radius: 16px; box-shadow: 0 4px 16px rgba(0,0,0,0.06); transition: all 0.25s; }
-        .hiw-step:hover { transform: translateY(-4px); box-shadow: 0 12px 32px rgba(156,11,9,0.12); }
-        .hiw-step::after { content: ''; position: absolute; top: 50%; right: -10px; width: 20px; height: 2px; background: var(--gray-200); transform: translateY(-50%); }
-        .hiw-step:last-child::after { display: none; }
-        .hiw-num { width: 48px; height: 48px; border-radius: 14px; background: var(--primary); color: var(--white); font-size: 1.2rem; font-weight: 800; display: flex; align-items: center; justify-content: center; margin: 0 auto 14px; box-shadow: 0 6px 16px rgba(156,11,9,0.3); }
-        .hiw-step h4 { font-size: 0.9rem; font-weight: 700; color: var(--gray-900); margin-bottom: 6px; }
-        .hiw-step p { font-size: 0.75rem; color: var(--gray-500); line-height: 1.5; }
-
-        /* ── Features ── */
-        .features-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
-        .feature-card { background: var(--white); border-radius: 16px; padding: 20px; display: flex; gap: 14px; align-items: flex-start; box-shadow: 0 4px 16px rgba(0,0,0,0.06); transition: all 0.25s; border: 2px solid transparent; }
-        .feature-card:hover { transform: translateY(-4px); box-shadow: 0 12px 32px rgba(156,11,9,0.1); border-color: var(--accent); }
-        .feature-icon { width: 48px; height: 48px; border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; flex-shrink: 0; }
-        .fi-red { background: var(--primary); color: var(--white); }
-        .fi-yellow { background: var(--accent); color: var(--primary); }
-        .fi-dark { background: var(--gray-900); color: var(--white); }
-        .fi-blue { background: #e8f0ff; color: #1a52cc; }
-        .fi-green { background: #e8f5e9; color: #2e7d32; }
-        .fi-purple { background: #f3e5f5; color: #6a1b9a; }
-        .fi-amber { background: #fff8e1; color: #f57f17; }
-        .fi-teal { background: #e0f2f1; color: #00695c; }
-        .feature-text h4 { font-size: 0.9rem; font-weight: 700; color: var(--gray-900); margin-bottom: 4px; }
-        .feature-text p { font-size: 0.75rem; color: var(--gray-500); line-height: 1.5; margin: 0; }
-
-        /* ── Recommended ── */
-        .rec-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
-        .rec-card { background: var(--white); border-radius: 16px; overflow: hidden; box-shadow: 0 4px 16px rgba(0,0,0,0.06); transition: all 0.25s; border: 2px solid transparent; }
-        .rec-card:hover { transform: translateY(-4px); box-shadow: 0 12px 32px rgba(156,11,9,0.12); border-color: var(--accent); }
-        .rec-img { width: 100%; height: 120px; object-fit: cover; background: var(--gray-100); }
-        .rec-info { padding: 14px; }
-        .rec-name { font-size: 0.85rem; font-weight: 700; color: var(--gray-900); margin-bottom: 4px; }
-        .rec-cat { font-size: 0.65rem; color: var(--gray-500); text-transform: uppercase; letter-spacing: 0.3px; margin-bottom: 10px; }
-        .rec-price { font-size: 1rem; font-weight: 800; color: var(--primary); }
-        .rec-btn { display: block; text-align: center; padding: 10px; background: var(--primary); color: var(--white); text-decoration: none; font-weight: 700; font-size: 0.8rem; transition: all 0.2s; }
-        .rec-btn:hover { background: var(--primary-dark); color: var(--accent); }
+        /* ── How it works ── */
+        .hiw { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 0; background: var(--white); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
+        .hiw-step { padding: 22px 20px; display: flex; gap: 14px; align-items: flex-start; }
+        .hiw-step + .hiw-step { border-left: 1px solid var(--line); }
+        .hiw-num { width: 34px; height: 34px; border-radius: 50%; background: var(--primary); color: var(--white); font-weight: 800; font-size: .95rem; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+        .hiw-step h3 { font-size: .88rem; font-weight: 700; margin-bottom: 4px; }
+        .hiw-step p { font-size: .76rem; color: var(--muted); line-height: 1.5; }
 
         /* ── CTA ── */
-        .cta-wrap { padding: 0 24px 64px; }
-        .cta-inner { max-width: 1200px; margin: 0 auto; background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%); border-radius: 24px; padding: 48px 56px; display: flex; align-items: center; justify-content: space-between; gap: 32px; position: relative; overflow: hidden; box-shadow: 0 12px 40px rgba(156,11,9,0.3); }
-        .cta-inner::before { content: ''; position: absolute; inset: 0; background: url("data:image/svg+xml,%3Csvg width='80' height='80' viewBox='0 0 80 80' xmlns='http://www.w3.org/2000/svg'%3E%3Ccircle cx='40' cy='40' r='30' fill='%23ffffff' fill-opacity='0.1'/%3E%3Crect x='10' y='10' width='20' height='20' fill='%23ffffff' fill-opacity='0.05' transform='rotate(20 20 20)'/%3E%3C/svg%3E"); }
-        .cta-text { position: relative; }
-        .cta-text h2 { color: var(--white); font-size: 1.6rem; font-weight: 800; margin-bottom: 8px; letter-spacing: -0.3px; }
-        .cta-text p { color: rgba(255,255,255,0.8); font-size: 0.9rem; margin: 0; max-width: 400px; }
-        .cta-btns { display: flex; gap: 12px; flex-shrink: 0; position: relative; }
-        .cta-btn-white { background: var(--accent); color: var(--primary); padding: 14px 28px; border-radius: 12px; font-size: 0.9rem; font-weight: 800; text-decoration: none; white-space: nowrap; transition: all 0.2s; box-shadow: 0 4px 16px rgba(156,11,9,0.25); }
-        .cta-btn-white:hover { background: var(--white); transform: translateY(-2px); }
-        .cta-btn-ghost { border: 2px solid var(--white); color: var(--white); padding: 14px 28px; border-radius: 12px; font-size: 0.9rem; font-weight: 700; text-decoration: none; white-space: nowrap; transition: all 0.2s; }
-        .cta-btn-ghost:hover { background: var(--white); color: var(--primary); }
+        .cta { margin: 34px 0 40px; background: linear-gradient(120deg, var(--primary), var(--primary-dark)); border-radius: 16px; padding: 38px 40px; display: flex; align-items: center; justify-content: space-between; gap: 24px; flex-wrap: wrap; }
+        .cta h2 { color: var(--white); font-size: 1.45rem; font-weight: 800; letter-spacing: -.01em; margin-bottom: 6px; }
+        .cta p { color: rgba(255,255,255,.85); font-size: .9rem; max-width: 48ch; }
+        .cta-btns { display: flex; gap: 12px; flex-wrap: wrap; }
 
         /* ── Footer ── */
-        .snd-footer { background: var(--gray-900); padding: 40px 24px 0; }
-        .footer-inner { max-width: 1200px; margin: 0 auto; display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 32px; padding-bottom: 24px; border-bottom: 1px solid rgba(255,255,255,0.1); }
-        .footer-brand img { width: 56px; height: 56px; border-radius: 0; background: transparent; padding: 2px; object-fit: contain; margin-bottom: 12px; display: block; }
-        .footer-brand h3 { color: var(--white); font-size: 1rem; font-weight: 800; margin-bottom: 6px; }
-        .footer-brand p { color: rgba(255,255,255,0.5); font-size: 0.8rem; line-height: 1.6; margin: 0 0 14px; }
-        .footer-social { display: flex; gap: 10px; }
-        .footer-social a { width: 40px; height: 40px; border-radius: 10px; background: var(--primary); display: flex; align-items: center; justify-content: center; color: var(--white); font-size: 1rem; text-decoration: none; transition: all 0.2s; }
-        .footer-social a:hover { background: var(--accent); color: var(--primary); transform: translateY(-2px); }
-        .footer-col h4 { color: var(--accent); font-size: 0.75rem; font-weight: 800; margin-bottom: 12px; letter-spacing: 1px; text-transform: uppercase; }
-        .footer-col ul { list-style: none; padding: 0; margin: 0; }
-        .footer-col li { margin-bottom: 8px; }
-        .footer-col a { color: rgba(255,255,255,0.6); font-size: 0.8rem; text-decoration: none; transition: color 0.2s; }
-        .footer-col a:hover { color: var(--accent); }
-        .footer-bottom { max-width: 1200px; margin: 0 auto; padding: 16px 0; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-        .footer-bottom > span { color: rgba(255,255,255,0.35); font-size: 0.75rem; }
-        .badge-pills { display: flex; gap: 8px; }
-        .badge-pill { background: rgba(255,255,255,0.08); border-radius: 20px; padding: 4px 12px; color: rgba(255,255,255,0.5); font-size: 0.68rem; }
+        .shop-footer { background: #191a1f; color: rgba(255,255,255,.62); padding: 40px 0 0; }
+        .foot-grid { max-width: 1200px; margin: 0 auto; padding: 0 16px 28px; display: grid; grid-template-columns: 2fr 1fr 1fr 1.3fr; gap: 30px; border-bottom: 1px solid rgba(255,255,255,.1); }
+        .foot-grid h3 { color: var(--white); font-size: .95rem; font-weight: 800; margin-bottom: 8px; }
+        .foot-grid h4 { color: var(--white); font-size: .74rem; font-weight: 800; letter-spacing: .8px; text-transform: uppercase; margin-bottom: 12px; }
+        .foot-grid p, .foot-grid li, .foot-grid a { font-size: .8rem; line-height: 1.7; color: rgba(255,255,255,.62); }
+        .foot-grid ul { list-style: none; }
+        .foot-grid a { text-decoration: none; transition: color .15s; }
+        .foot-grid a:hover { color: var(--white); }
+        .foot-brand img { width: 52px; margin-bottom: 10px; }
+        .foot-social { display: flex; gap: 10px; margin-top: 14px; }
+        .foot-social a { width: 38px; height: 38px; border-radius: 9px; background: var(--primary); color: var(--white); display: flex; align-items: center; justify-content: center; font-size: 1rem; transition: transform .15s; }
+        .foot-social a:hover { transform: translateY(-2px); color: var(--white); }
+        .foot-bottom { max-width: 1200px; margin: 0 auto; padding: 16px; display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; font-size: .74rem; color: rgba(255,255,255,.4); }
 
         /* ── Responsive ── */
-        @media (max-width: 1100px) { .item-grid { grid-template-columns: repeat(4,1fr); } .rec-grid { grid-template-columns: repeat(3,1fr); } .footer-inner { grid-template-columns: 1fr 1fr; } }
-        @media (max-width: 860px)  { .item-grid { grid-template-columns: repeat(3,1fr); } .rec-grid { grid-template-columns: repeat(2,1fr); } .features-grid { grid-template-columns: repeat(2,1fr); } .hiw-grid { grid-template-columns: repeat(2,1fr); } .hiw-step::after { display: none; } .cta-inner { flex-direction: column; text-align: center; } .cta-btns { justify-content: center; } }
-        @media (max-width: 580px)  { .item-grid { grid-template-columns: repeat(2,1fr); } .rec-grid { grid-template-columns: 1fr; } .snd-search { display: none; } .features-grid { grid-template-columns: 1fr; } .hiw-grid { grid-template-columns: 1fr; } .footer-inner { grid-template-columns: 1fr; } .footer-bottom { flex-direction: column; text-align: center; } .hero-text h1 { font-size: 1.4rem; } .hero { padding: 32px 16px; } }
+        @media (max-width: 900px) {
+            .hero-collage { display: none; }
+            .foot-grid { grid-template-columns: 1fr 1fr; }
+            .hiw { grid-template-columns: 1fr 1fr; }
+            .hiw-step + .hiw-step { border-left: 0; }
+            .hiw-step:nth-child(even) { border-left: 1px solid var(--line); }
+            .hiw-step:nth-child(n+3) { border-top: 1px solid var(--line); }
+        }
+        @media (max-width: 640px) {
+            .util-right { display: none; }
+            .shop-search { order: 3; flex-basis: 100%; }
+            .shop-actions { margin-left: auto; }
+            .btn-nav { padding: 9px 13px; font-size: .78rem; }
+            .prod-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+            .hero-banner { padding: 26px 22px; }
+            .hiw { grid-template-columns: 1fr; }
+            .hiw-step { border-left: 0 !important; }
+            .hiw-step + .hiw-step { border-top: 1px solid var(--line); }
+            .foot-grid { grid-template-columns: 1fr; }
+            .cta { padding: 28px 24px; }
+        }
     </style>
 </head>
 <body>
 
-<!-- ── Navbar ── -->
-<nav class="snd-navbar">
-    <a class="snd-brand" href="<?= base_url('portal') ?>">
-        <img src="<?= base_url('img/logo.png') ?>" alt="IGTT" onerror="this.style.display='none'">
-        <span>IGTT</span>
-    </a>
-    <div class="nav-divider"></div>
-    <form class="snd-search" method="get" action="<?= base_url('portal') ?>">
-        <input type="text" name="q" placeholder="Search rental items..." value="<?= esc($searchQ ?? '') ?>">
-        <?php if (!empty($activeCat)): ?>
-        <input type="hidden" name="category" value="<?= esc($activeCat) ?>">
-        <?php endif; ?>
-        <?php if (!empty($activeSort) && $activeSort !== 'newest'): ?>
-        <input type="hidden" name="sort" value="<?= esc($activeSort) ?>">
-        <?php endif; ?>
-        <?php if (!empty($activeAvail) && $activeAvail !== 'available'): ?>
-        <input type="hidden" name="availability" value="<?= esc($activeAvail) ?>">
-        <?php endif; ?>
-        <button type="submit"><i class="bi bi-search"></i></button>
-    </form>
-    <div class="nav-actions">
-        <a href="<?= base_url('login') ?>" class="nav-btn nav-btn-outline"><i class="bi bi-person me-1"></i>Sign In</a>
-        <a href="<?= base_url('register') ?>" class="nav-btn nav-btn-solid"><i class="bi bi-person-plus me-1"></i>Register</a>
-    </div>
-</nav>
-
-<!-- ── Sub-nav ── -->
-<div class="sub-nav">
-    <a href="<?= base_url('login') ?>"><i class="bi bi-person-fill"></i> Customer Portal</a>
-    <span class="sep">|</span>
-    <a href="<?= base_url('owner/login') ?>"><i class="bi bi-shop"></i> Owner Portal</a>
-    <span class="sep">|</span>
-    <a href="<?= base_url('admin/login') ?>"><i class="bi bi-shield-lock-fill"></i> Admin Portal</a>
-    <span class="sep">|</span>
-    <a href="<?= base_url('register') ?>"><i class="bi bi-person-plus"></i> Create Account</a>
-</div>
-
-<!-- ── Hero ── -->
-<div class="hero">
-    <div class="hero-inner">
-        <div class="hero-text">
-            <h1>Islands Getaway Travel and Tours </h1>
-            <p>Browse available rental items &mdash; sign in to start renting</p>   
+<!-- ── Utility strip ── -->
+<div class="util-strip">
+    <div class="util-inner">
+        <a href="<?= base_url('login') ?>"><i class="bi bi-person-fill"></i> Customer</a>
+        <a href="<?= base_url('owner/login') ?>"><i class="bi bi-shop"></i> Owner</a>
+        <a href="<?= base_url('admin/login') ?>"><i class="bi bi-shield-lock-fill"></i> Admin</a>
+        <div class="util-right">
+            <a href="tel:+639381598187"><i class="bi bi-telephone-fill"></i> +63 938 159 8187</a>
+            <span><i class="bi bi-clock"></i> Mon–Sun, 7AM–8PM</span>
         </div>
     </div>
 </div>
 
-<!-- ── Category Tabs ── -->
-<div class="cat-bar">
-    <div class="cat-inner">
-        <?php
-            $catBase = array_filter([
-                'q'            => $searchQ ?? '',
-                'sort'         => $activeSort ?? 'newest',
-                'availability' => $activeAvail ?? 'available',
-            ], fn($v) => $v !== '' && $v !== 'newest' && $v !== 'available');
-            $allUrl = $catBase ? base_url('portal') . '?' . http_build_query($catBase) : base_url('portal');
-        ?>
-        <a class="cat-tab <?= !$activeCat ? 'active' : '' ?>" href="<?= $allUrl ?>">
-            <div class="cat-icon"><i class="bi bi-grid-fill"></i></div>
-            All
+<!-- ── Header / search ── -->
+<header class="shop-header">
+    <nav class="shop-nav">
+        <a class="shop-brand" href="<?= base_url('portal') ?>">
+            <img src="<?= base_url('img/logo.png') ?>" alt="IGTT logo" onerror="this.style.display='none'">
+            <span>
+                <b>IGTT Rentals</b>
+                <small>Islands Getaway Travel &amp; Tours</small>
+            </span>
         </a>
-        <?php foreach ($categories as $cat):
-            $catParams = array_merge($catBase, ['category' => $cat['id']]);
-            $catUrl = base_url('portal') . '?' . http_build_query($catParams);
-        ?>
-        <a class="cat-tab <?= $activeCat == $cat['id'] ? 'active' : '' ?>"
-           href="<?= $catUrl ?>">
-            <div class="cat-icon"><i class="bi bi-tag-fill"></i></div>
-            <?= esc($cat['name']) ?>
-        </a>
-        <?php endforeach; ?>
-    </div>
-</div>
+        <form class="shop-search" method="get" action="<?= base_url('portal') ?>" role="search">
+            <input type="text" name="q" placeholder="Search for equipment, gear, vehicles…" value="<?= esc($searchQ ?? '') ?>" aria-label="Search rental items">
+            <?php if (!empty($activeCat)): ?><input type="hidden" name="category" value="<?= esc($activeCat) ?>"><?php endif; ?>
+            <?php if (!empty($activeSort) && $activeSort !== 'newest'): ?><input type="hidden" name="sort" value="<?= esc($activeSort) ?>"><?php endif; ?>
+            <?php if (!empty($activeAvail) && $activeAvail !== 'available'): ?><input type="hidden" name="availability" value="<?= esc($activeAvail) ?>"><?php endif; ?>
+            <button type="submit" aria-label="Search"><i class="bi bi-search"></i></button>
+        </form>
+        <div class="shop-actions">
+            <a href="<?= base_url('login') ?>" class="btn-nav ghost"><i class="bi bi-person"></i>Sign In</a>
+            <a href="<?= base_url('register') ?>" class="btn-nav solid"><i class="bi bi-person-plus"></i>Register</a>
+        </div>
+    </nav>
+</header>
 
-<!-- ── Filter Bar ── -->
+<!-- ── Category rail ── -->
 <?php
-    // Build a base URL preserving existing params but allowing override
-    $qp = array_filter([
+    $catBase = array_filter([
         'q'            => $searchQ ?? '',
-        'category'     => $activeCat ?? '',
         'sort'         => $activeSort ?? 'newest',
         'availability' => $activeAvail ?? 'available',
-    ], fn($v) => $v !== '' && $v !== null);
-    $sortLabels = [
-        'newest'     => 'Newest',
-        'name_asc'   => 'Name A–Z',
-        'name_desc'  => 'Name Z–A',
-        'price_asc'  => 'Price: Low–High',
-        'price_desc' => 'Price: High–Low',
-    ];
-    $portalUrl = function(array $override = [], array $base = []) use (&$portalUrl): string {
-        $params = array_merge($base, $override);
-        $params = array_filter($params, fn($v) => $v !== '' && $v !== 'newest' && $v !== 'available');
-        return base_url('portal') . ($params ? '?' . http_build_query($params) : '');
-    };
+    ], fn ($v) => $v !== '' && $v !== 'newest' && $v !== 'available');
+    $allUrl = $catBase ? base_url('portal') . '?' . http_build_query($catBase) : base_url('portal');
 ?>
-<div class="filter-bar">
-    <div class="filter-inner">
-        <span class="filter-label">Show:</span>
-        <div class="avail-toggle">
-            <a href="<?= $portalUrl(['availability' => 'available'], $qp) ?>"
-               class="<?= ($activeAvail ?? 'available') === 'available' ? 'active' : '' ?>">
-               Available Only
-            </a>
-            <a href="<?= $portalUrl(['availability' => 'all'], $qp) ?>"
-               class="<?= ($activeAvail ?? '') === 'all' ? 'active' : '' ?>">
-               All Items
-            </a>
-        </div>
-        <div class="filter-sep"></div>
-        <span class="filter-label">Sort:</span>
-        <select class="sort-select" onchange="location.href=this.value">
-            <?php foreach ($sortLabels as $val => $label):
-                $opt = $portalUrl(['sort' => $val], $qp);
-            ?>
-            <option value="<?= $opt ?>" <?= ($activeSort ?? 'newest') === $val ? 'selected' : '' ?>>
-                <?= $label ?>
-            </option>
-            <?php endforeach; ?>
-        </select>
-        <?php if (!empty($searchQ)): ?>
-        <div class="filter-sep"></div>
-        <div class="active-filters">
-            <span class="filter-chip">
-                <i class="bi bi-search"></i> "<?= esc($searchQ) ?>"
-                <a href="<?= $portalUrl(['q' => ''], $qp) ?>" title="Clear search"><i class="bi bi-x"></i></a>
-            </span>
-        </div>
-        <?php endif; ?>
-        <?php if (!empty($activeCat)): ?>
-            <?php foreach ($categories as $cat): if ($cat['id'] == $activeCat): ?>
-            <div class="active-filters">
-                <span class="filter-chip">
-                    <i class="bi bi-tag"></i> <?= esc($cat['name']) ?>
-                    <a href="<?= $portalUrl(['category' => ''], $qp) ?>" title="Clear category"><i class="bi bi-x"></i></a>
-                </span>
-            </div>
-            <?php endif; endforeach; ?>
-        <?php endif; ?>
-    </div>
-</div>
-
-<!-- ── Recommended section removed ── -->
-
-<!-- ── Item Grid ── -->
-<div class="page-wrap">
-    <div class="section-head">
-        <div class="section-title">
-            <span class="accent"></span>
-            <?php if ($activeCat): ?>
-                <?php foreach ($categories as $cat): if ($cat['id'] == $activeCat): ?>
-                    <?= esc($cat['name']) ?> Items
-                <?php endif; endforeach; ?>
-            <?php else: ?>
-                Available Rental Items
-            <?php endif; ?>
-        </div>
-        <span style="font-size:0.75rem;color:#9098b8;">
-            <?= count($items) ?> item<?= count($items) != 1 ? 's' : '' ?> found
-        </span>
-    </div>
-
-    <?php if (!empty($items)): ?>
-    <div class="item-grid">
-        <?php foreach ($items as $item): ?>
-        <?php $available = (int)$item['quantity'] > 0; ?>
-        <?php
-            $displayPrice = (float) ($item['price'] ?? 0);
-            $displayUnit  = '/day';
-
-            if ($displayPrice <= 0) {
-                $rateOpt1 = json_decode($item['rate_option_1'] ?? '{}', true);
-                $rateOpt2 = json_decode($item['rate_option_2'] ?? '{}', true);
-
-                if (is_array($rateOpt1) && (float) ($rateOpt1['price'] ?? 0) > 0) {
-                    $displayPrice = (float) $rateOpt1['price'];
-                    $displayUnit  = !empty($rateOpt1['hours']) ? '/' . (int) $rateOpt1['hours'] . 'hrs' : '';
-                } elseif (is_array($rateOpt2) && (float) ($rateOpt2['price'] ?? 0) > 0) {
-                    $displayPrice = (float) $rateOpt2['price'];
-                    $displayUnit  = !empty($rateOpt2['hours']) ? '/' . (int) $rateOpt2['hours'] . 'hrs' : '';
-                }
-            }
+<div class="cat-rail">
+    <div class="cat-rail-inner">
+        <a class="cat-chip <?= !$activeCat ? 'active' : '' ?>" href="<?= $allUrl ?>"><i class="bi bi-grid-fill"></i>All Items</a>
+        <?php foreach ($categories as $cat):
+            $catUrl = base_url('portal') . '?' . http_build_query(array_merge($catBase, ['category' => $cat['id']]));
         ?>
-        <a class="item-card" href="<?= base_url('login') ?>" title="Sign in to rent <?= esc($item['name']) ?>">
-            <div class="item-img-wrap">
-                <?php if (!empty($item['image'])): ?>
-                    <img src="<?= base_url('uploads/items/' . esc($item['image'])) ?>"
-                         alt="<?= esc($item['name']) ?>" loading="lazy"
-                         onerror="this.style.display='none'; this.nextElementSibling.style.display='flex'">
-                    <div class="no-img-placeholder" style="display:none"><i class="bi bi-image"></i></div>
-                <?php else: ?>
-                    <div class="no-img-placeholder"><i class="bi bi-image"></i></div>
-                <?php endif; ?>
-                <span class="item-badge <?= $available ? '' : 'out' ?>">
-                    <?= $available ? 'Available' : 'Out of Stock' ?>
-                </span>
-            </div>
-            <div class="item-info">
-                <div class="item-name"><?= esc($item['name']) ?></div>
-                <?php if (!empty($item['category_name'])): ?>
-                <div class="item-category"><i class="bi bi-tag me-1"></i><?= esc($item['category_name']) ?></div>
-                <?php endif; ?>
-                <div class="item-price">
-                    <?php if ($displayPrice > 0): ?>
-                        &#8369;<?= number_format($displayPrice, 2) ?>
-                        <?php if ($displayUnit !== ''): ?>
-                            <span class="unit"><?= esc($displayUnit) ?></span>
-                        <?php endif; ?>
-                    <?php else: ?>
-                        Ask for price
-                    <?php endif; ?>
-                </div>
-                <div class="item-qty">
-                    <i class="bi bi-box-seam me-1"></i><?= (int)$item['quantity'] ?> unit<?= (int)$item['quantity'] != 1 ? 's' : '' ?> left
-                </div>
-            </div>
+        <a class="cat-chip <?= $activeCat == $cat['id'] ? 'active' : '' ?>" href="<?= $catUrl ?>">
+            <i class="bi bi-tag"></i><?= esc($cat['name']) ?>
         </a>
         <?php endforeach; ?>
     </div>
-    <?php else: ?>
-    <div class="empty-state">
-        <i class="bi bi-box-seam"></i>
-        <p>No rental items available right now. Check back soon!</p>
-    </div>
-    <?php endif; ?>
 </div>
 
-<!-- ── How It Works ── -->
-<section class="s-wrap s-wrap-white">
-    <div class="s-inner">
-        <div class="s-head">
-            <span class="s-tag">Simple Process</span>
-            <h2>How It Works</h2>
-            <p>Rent anything in four easy steps</p>
+<main class="wrap">
+
+    <?php if (!$isFiltered): ?>
+    <!-- ── Hero banner ── -->
+    <div class="hero-zone">
+        <div class="hero-banner rise">
+            <div class="hero-copy">
+                <h1>Rent the gear you need, right here on the island.</h1>
+                <p>Browse equipment from local owners in Dinagat Islands — compare prices, check availability, and book online with your IGTT wallet.</p>
+                <div class="hero-ctas">
+                    <a class="btn-hero light" href="#browse"><i class="bi bi-bag"></i>Start Browsing</a>
+                    <a class="btn-hero line" href="<?= base_url('register') ?>"><i class="bi bi-person-plus"></i>Create Free Account</a>
+                </div>
+            </div>
+            <?php if ($heroPhotos !== []): ?>
+            <div class="hero-collage" aria-hidden="true">
+                <?php foreach ($heroPhotos as $hp): ?>
+                <a href="<?= base_url('login') ?>" tabindex="-1">
+                    <img src="<?= base_url('uploads/items/' . esc($hp['image'])) ?>" alt="" loading="lazy"
+                         onerror="this.parentElement.style.display='none'">
+                </a>
+                <?php endforeach; ?>
+            </div>
+            <?php endif; ?>
         </div>
-        <div class="hiw-grid">
+    </div>
+
+    <!-- ── Trust strip ── -->
+    <div class="trust-strip rise rise-2">
+        <div class="trust-inner">
+            <div class="trust-item"><i class="bi bi-wallet2"></i><span>Wallet Payments<small>Top up once, pay instantly</small></span></div>
+            <div class="trust-item"><i class="bi bi-patch-check-fill"></i><span>Verified Owners<small>ID-checked rental providers</small></span></div>
+            <div class="trust-item"><i class="bi bi-star-fill"></i><span>Real Reviews<small>Rated by actual renters</small></span></div>
+            <div class="trust-item"><i class="bi bi-bell-fill"></i><span>Booking Alerts<small>Reminders before due dates</small></span></div>
+        </div>
+    </div>
+
+    <?php if (!empty($recommendedItems)): ?>
+    <!-- ── Featured rail ── -->
+    <section class="rise rise-3">
+        <div class="sec-head">
+            <h2><i class="bi bi-lightning-charge-fill" style="color:var(--star)"></i> Just Arrived</h2>
+            <span class="count">Newest available items</span>
+        </div>
+        <div class="feat-rail">
+            <?php foreach ($recommendedItems as $item):
+                [$price, $unit] = $displayPriceOf($item);
+                $r = $ratings[(int) $item['id']] ?? null;
+            ?>
+            <a class="prod-card" href="<?= base_url('login') ?>" title="Sign in to rent <?= esc($item['name']) ?>">
+                <div class="prod-img">
+                    <?php if (!empty($item['image'])): ?>
+                        <img src="<?= base_url('uploads/items/' . esc($item['image'])) ?>" alt="<?= esc($item['name']) ?>" loading="lazy"
+                             onerror="this.style.display='none'; this.nextElementSibling.style.display='flex'">
+                        <div class="noimg" style="display:none"><i class="bi bi-image"></i></div>
+                    <?php else: ?>
+                        <div class="noimg"><i class="bi bi-image"></i></div>
+                    <?php endif; ?>
+                    <span class="flag">New</span>
+                </div>
+                <div class="prod-body">
+                    <div class="prod-name"><?= esc($item['name']) ?></div>
+                    <?php if ($r): ?>
+                    <div class="prod-rate"><span class="stars"><?= portal_stars($r['avg']) ?></span> <?= $r['avg'] ?> (<?= $r['total'] ?>)</div>
+                    <?php endif; ?>
+                    <div class="prod-price">
+                        <?php if ($price > 0): ?>₱<?= number_format($price, 2) ?> <span class="unit"><?= esc($unit) ?></span>
+                        <?php else: ?>Ask for price<?php endif; ?>
+                    </div>
+                </div>
+            </a>
+            <?php endforeach; ?>
+        </div>
+    </section>
+    <?php endif; ?>
+    <?php endif; /* !$isFiltered */ ?>
+
+    <!-- ── Main grid ── -->
+    <section id="browse">
+        <div class="sec-head">
+            <?php
+                $activeCatName = null;
+                if ($activeCat) {
+                    foreach ($categories as $cat) {
+                        if ($cat['id'] == $activeCat) { $activeCatName = $cat['name']; break; }
+                    }
+                }
+            ?>
+            <h2>
+                <?php if ($activeCatName !== null): ?>
+                    <?= esc($activeCatName) ?>
+                <?php elseif (!empty($searchQ)): ?>
+                    Results for &ldquo;<?= esc($searchQ) ?>&rdquo;
+                <?php else: ?>
+                    All Rental Items
+                <?php endif; ?>
+            </h2>
+            <span class="count"><?= count($items) ?> item<?= count($items) !== 1 ? 's' : '' ?></span>
+        </div>
+
+        <?php
+            $qp = array_filter([
+                'q'            => $searchQ ?? '',
+                'category'     => $activeCat ?? '',
+                'sort'         => $activeSort ?? 'newest',
+                'availability' => $activeAvail ?? 'available',
+            ], fn ($v) => $v !== '' && $v !== null);
+            $sortLabels = [
+                'newest'     => 'Newest',
+                'name_asc'   => 'Name A–Z',
+                'name_desc'  => 'Name Z–A',
+                'price_asc'  => 'Price: Low–High',
+                'price_desc' => 'Price: High–Low',
+            ];
+            $portalUrl = function (array $override, array $base): string {
+                $params = array_filter(array_merge($base, $override), fn ($v) => $v !== '' && $v !== 'newest' && $v !== 'available');
+                return base_url('portal') . ($params ? '?' . http_build_query($params) : '') . '#browse';
+            };
+        ?>
+        <div class="filter-bar">
+            <span class="lbl">Show</span>
+            <div class="avail-toggle">
+                <a href="<?= $portalUrl(['availability' => 'available'], $qp) ?>" class="<?= ($activeAvail ?? 'available') === 'available' ? 'active' : '' ?>">Available Only</a>
+                <a href="<?= $portalUrl(['availability' => 'all'], $qp) ?>" class="<?= ($activeAvail ?? '') === 'all' ? 'active' : '' ?>">All Items</a>
+            </div>
+            <span class="lbl">Sort</span>
+            <select class="sort-select" onchange="location.href=this.value" aria-label="Sort items">
+                <?php foreach ($sortLabels as $val => $label): ?>
+                <option value="<?= $portalUrl(['sort' => $val], $qp) ?>" <?= ($activeSort ?? 'newest') === $val ? 'selected' : '' ?>><?= $label ?></option>
+                <?php endforeach; ?>
+            </select>
+            <?php if (!empty($searchQ)): ?>
+            <span class="chip"><i class="bi bi-search"></i>&ldquo;<?= esc($searchQ) ?>&rdquo;
+                <a href="<?= $portalUrl(['q' => ''], $qp) ?>" title="Clear search"><i class="bi bi-x-lg"></i></a>
+            </span>
+            <?php endif; ?>
+            <?php if (!empty($activeCat)): foreach ($categories as $cat): if ($cat['id'] == $activeCat): ?>
+            <span class="chip"><i class="bi bi-tag"></i><?= esc($cat['name']) ?>
+                <a href="<?= $portalUrl(['category' => ''], $qp) ?>" title="Clear category"><i class="bi bi-x-lg"></i></a>
+            </span>
+            <?php endif; endforeach; endif; ?>
+        </div>
+
+        <?php if (!empty($items)): ?>
+        <div class="prod-grid">
+            <?php foreach ($items as $item):
+                $available = (int) $item['quantity'] > 0;
+                [$price, $unit] = $displayPriceOf($item);
+                $r    = $ratings[(int) $item['id']] ?? null;
+                $sold = $rentCounts[(int) $item['id']] ?? 0;
+            ?>
+            <a class="prod-card" href="<?= base_url('login') ?>" title="Sign in to rent <?= esc($item['name']) ?>">
+                <div class="prod-img">
+                    <?php if (!empty($item['image'])): ?>
+                        <img src="<?= base_url('uploads/items/' . esc($item['image'])) ?>" alt="<?= esc($item['name']) ?>" loading="lazy"
+                             onerror="this.style.display='none'; this.nextElementSibling.style.display='flex'">
+                        <div class="noimg" style="display:none"><i class="bi bi-image"></i></div>
+                    <?php else: ?>
+                        <div class="noimg"><i class="bi bi-image"></i></div>
+                    <?php endif; ?>
+                    <span class="flag <?= $available ? '' : 'out' ?>"><?= $available ? 'Available' : 'Out of Stock' ?></span>
+                </div>
+                <div class="prod-body">
+                    <div class="prod-name"><?= esc($item['name']) ?></div>
+                    <?php if (!empty($item['category_name'])): ?>
+                    <div class="prod-cat"><i class="bi bi-tag"></i> <?= esc($item['category_name']) ?></div>
+                    <?php endif; ?>
+                    <?php if ($r): ?>
+                    <div class="prod-rate"><span class="stars"><?= portal_stars($r['avg']) ?></span> <?= $r['avg'] ?> (<?= $r['total'] ?>)</div>
+                    <?php endif; ?>
+                    <div class="prod-price">
+                        <?php if ($price > 0): ?>₱<?= number_format($price, 2) ?> <span class="unit"><?= esc($unit) ?></span>
+                        <?php else: ?>Ask for price<?php endif; ?>
+                    </div>
+                    <div class="prod-meta">
+                        <span><i class="bi bi-box-seam"></i> <?= (int) $item['quantity'] ?> in stock</span>
+                        <?php if ($sold > 0): ?><span><?= $sold ?> rented</span><?php endif; ?>
+                    </div>
+                </div>
+            </a>
+            <?php endforeach; ?>
+        </div>
+        <?php else: ?>
+        <div class="empty-state">
+            <i class="bi bi-box-seam"></i>
+            <p>No items match your search. Try a different keyword or category.</p>
+        </div>
+        <?php endif; ?>
+    </section>
+
+    <?php if (!$isFiltered && !empty($reviews)): ?>
+    <!-- ── Reviews rail ── -->
+    <section>
+        <div class="sec-head">
+            <h2>What renters say</h2>
+            <span class="count"><?= count($reviews) ?> recent review<?= count($reviews) !== 1 ? 's' : '' ?></span>
+        </div>
+        <div class="rev-rail">
+            <?php foreach ($reviews as $rev): ?>
+            <div class="rev-card">
+                <div class="rev-top">
+                    <div class="rev-ava"><?= esc(strtoupper(mb_substr($rev['user_name'] ?? '?', 0, 1))) ?></div>
+                    <div>
+                        <div class="rev-name"><?= esc($rev['user_name'] ?? 'Renter') ?></div>
+                        <div class="rev-item">rented <?= esc($rev['item_name'] ?? 'an item') ?></div>
+                    </div>
+                </div>
+                <div class="rev-stars"><?= portal_stars((float) ($rev['rating'] ?? 0)) ?></div>
+                <?php if (!empty($rev['comment'])): ?>
+                <p class="rev-text"><?= esc($rev['comment']) ?></p>
+                <?php endif; ?>
+            </div>
+            <?php endforeach; ?>
+        </div>
+    </section>
+    <?php endif; ?>
+
+    <?php if (!$isFiltered): ?>
+    <!-- ── How it works ── -->
+    <section>
+        <div class="sec-head"><h2>How renting works</h2></div>
+        <div class="hiw">
             <div class="hiw-step">
                 <div class="hiw-num">1</div>
-                <h4>Create Account</h4>
-                <p>Sign up for free as a Customer or register as a Rental Owner in minutes.</p>
+                <div><h3>Create an account</h3><p>Sign up free as a customer, or register as a rental owner.</p></div>
             </div>
             <div class="hiw-step">
                 <div class="hiw-num">2</div>
-                <h4>Browse Items</h4>
-                <p>Explore rental items across categories. Filter by type, price, or availability.</p>
+                <div><h3>Pick your item</h3><p>Filter by category, price, or availability and choose your dates.</p></div>
             </div>
             <div class="hiw-step">
                 <div class="hiw-num">3</div>
-                <h4>Book &amp; Pay</h4>
-                <p>Select your rental period, confirm the booking, and pay securely via wallet or gateway.</p>
+                <div><h3>Book &amp; pay</h3><p>Confirm the booking and pay securely with your wallet or a gateway.</p></div>
             </div>
             <div class="hiw-step">
                 <div class="hiw-num">4</div>
-                <h4>Pick Up &amp; Return</h4>
-                <p>Collect your item on the agreed date and return it on time to avoid overstay charges.</p>
+                <div><h3>Pick up &amp; return</h3><p>Collect on the agreed date and return on time to avoid overstay fees.</p></div>
             </div>
         </div>
-    </div>
-</section>
+    </section>
 
-<!-- ── Features ── -->
-<section class="s-wrap">
-    <div class="s-inner">
-        <div class="s-head">
-            <span class="s-tag">Why Islands Getaway Travel and Tours</span>
-            <h2>Everything You Need</h2>
-            <p>Built for customers, owners, and administrators alike</p>
-        </div>
-        <div class="features-grid">
-            <div class="feature-card">
-                <div class="feature-icon fi-blue"><i class="bi bi-wallet2"></i></div>
-                <div class="feature-text">
-                    <h4>Wallet Payments</h4>
-                    <p>Top up your in-app wallet and pay for rentals instantly — no cash handling needed.</p>
-                </div>
-            </div>
-            <div class="feature-card">
-                <div class="feature-icon fi-green"><i class="bi bi-bell-fill"></i></div>
-                <div class="feature-text">
-                    <h4>Real-Time Notifications</h4>
-                    <p>Get instant alerts for booking confirmations, due dates, and payment receipts.</p>
-                </div>
-            </div>
-            <div class="feature-card">
-                <div class="feature-icon fi-red"><i class="bi bi-shield-lock-fill"></i></div>
-                <div class="feature-text">
-                    <h4>Role-Based Access</h4>
-                    <p>Separate portals for Customers, Owners, and Admins ensure secure, focused workflows.</p>
-                </div>
-            </div>
-            <div class="feature-card">
-                <div class="feature-icon fi-purple"><i class="bi bi-graph-up-arrow"></i></div>
-                <div class="feature-text">
-                    <h4>Owner Reports</h4>
-                    <p>Rental owners get detailed reports on inventory performance, earnings, and occupancy rates.</p>
-                </div>
-            </div>
-            <div class="feature-card">
-                <div class="feature-icon fi-amber"><i class="bi bi-star-fill"></i></div>
-                <div class="feature-text">
-                    <h4>Reviews &amp; Ratings</h4>
-                    <p>Customers can leave reviews after each rental, helping others make informed decisions.</p>
-                </div>
-            </div>
-            <div class="feature-card">
-                <div class="feature-icon fi-teal"><i class="bi bi-phone"></i></div>
-                <div class="feature-text">
-                    <h4>Mobile Friendly</h4>
-                    <p>Fully responsive design works seamlessly on any device — phone, tablet, or desktop.</p>
-                </div>
-            </div>
-        </div>
-    </div>
-</section>
-
-
-<!-- ── CTA Banner ── -->
-<div class="cta-wrap">
-    <div class="cta-inner">
-        <div class="cta-text">
-            <h2>Ready to Start Renting?</h2>
-            <p>Join hundreds of customers and owners already using Islands Getaway Travel and Tours today.</p>
+    <!-- ── CTA ── -->
+    <div class="cta">
+        <div>
+            <h2>Ready to start renting?</h2>
+            <p>Join customers and owners across Dinagat Islands already booking through IGTT.</p>
         </div>
         <div class="cta-btns">
-            <a href="<?= base_url('register') ?>" class="cta-btn-white">
-                <i class="bi bi-person-plus me-1"></i> Create Account
-            </a>
-            <a href="<?= base_url('login') ?>" class="cta-btn-ghost">
-                <i class="bi bi-box-arrow-in-right me-1"></i> Sign In
-            </a>
+            <a href="<?= base_url('register') ?>" class="btn-hero light"><i class="bi bi-person-plus"></i>Create Account</a>
+            <a href="<?= base_url('login') ?>" class="btn-hero line"><i class="bi bi-box-arrow-in-right"></i>Sign In</a>
         </div>
     </div>
-</div>
+    <?php endif; ?>
+
+</main>
 
 <!-- ── Footer ── -->
-<footer class="snd-footer">
-    <div class="footer-inner">
-        <div class="footer-brand">
-            <img src="<?= base_url('img/logo.png') ?>" alt="IGTT" onerror="this.style.display='none'">
+<footer class="shop-footer">
+    <div class="foot-grid">
+        <div class="foot-brand">
+            <img src="<?= base_url('img/logo.png') ?>" alt="IGTT logo" onerror="this.style.display='none'">
             <h3>Islands Getaway Travel and Tours</h3>
-            <p>Your all-in-one platform for rental management. Browse, book, and manage rentals with ease — powered by IGTT Services.</p>
-            <div class="footer-social">
-                <a href="#" title="Facebook"><i class="bi bi-facebook"></i></a>
-                <a href="#" title="Instagram"><i class="bi bi-instagram"></i></a>
-                <a href="#" title="Email"><i class="bi bi-envelope-fill"></i></a>
-                <a href="#" title="Phone"><i class="bi bi-telephone-fill"></i></a>
+            <p>Your local platform for equipment rentals in Dinagat Islands. Browse, book, and manage rentals with ease — powered by IGTT Services.</p>
+            <div class="foot-social">
+                <a href="#" title="Facebook" aria-label="Facebook"><i class="bi bi-facebook"></i></a>
+                <a href="#" title="Instagram" aria-label="Instagram"><i class="bi bi-instagram"></i></a>
+                <a href="mailto:islandgetawaytravelandtour@gmail.com" title="Email" aria-label="Email"><i class="bi bi-envelope-fill"></i></a>
+                <a href="tel:+639381598187" title="Phone" aria-label="Phone"><i class="bi bi-telephone-fill"></i></a>
             </div>
         </div>
-        <div class="footer-col">
+        <div>
             <h4>Portals</h4>
             <ul>
-                <li><a href="<?= base_url('login') ?>"><i class="bi bi-chevron-right me-1"></i>Customer Sign In</a></li>
-                <li><a href="<?= base_url('register') ?>"><i class="bi bi-chevron-right me-1"></i>Create Account</a></li>
-                <li><a href="<?= base_url('owner/login') ?>"><i class="bi bi-chevron-right me-1"></i>Owner Sign In</a></li>
-                <li><a href="<?= base_url('owner/register') ?>"><i class="bi bi-chevron-right me-1"></i>Register as Owner</a></li>
-                <li><a href="<?= base_url('admin/login') ?>"><i class="bi bi-chevron-right me-1"></i>Admin Portal</a></li>
+                <li><a href="<?= base_url('login') ?>">Customer Sign In</a></li>
+                <li><a href="<?= base_url('register') ?>">Create Account</a></li>
+                <li><a href="<?= base_url('owner/login') ?>">Owner Sign In</a></li>
+                <li><a href="<?= base_url('owner/register') ?>">Register as Owner</a></li>
+                <li><a href="<?= base_url('admin/login') ?>">Admin Portal</a></li>
             </ul>
         </div>
-        <div class="footer-col">
-            <h4>Features</h4>
+        <div>
+            <h4>Explore</h4>
             <ul>
-                <li><a href="#"><i class="bi bi-chevron-right me-1"></i>Wallet Payments</a></li>
-                <li><a href="#"><i class="bi bi-chevron-right me-1"></i>Real-Time Tracking</a></li>
-                <li><a href="#"><i class="bi bi-chevron-right me-1"></i>Owner Reports</a></li>
-                <li><a href="#"><i class="bi bi-chevron-right me-1"></i>Notifications</a></li>
-                <li><a href="#"><i class="bi bi-chevron-right me-1"></i>Reviews &amp; Ratings</a></li>
+                <li><a href="#browse">Browse Items</a></li>
+                <li><a href="<?= base_url('reviews') ?>">All Reviews</a></li>
+                <?php foreach (array_slice($categories, 0, 3) as $cat): ?>
+                <li><a href="<?= base_url('portal') . '?category=' . $cat['id'] ?>"><?= esc($cat['name']) ?></a></li>
+                <?php endforeach; ?>
             </ul>
         </div>
-        <div class="footer-col">
+        <div>
             <h4>Contact</h4>
             <ul>
-                <li><a href="#"><i class="bi bi-geo-alt me-1"></i>Brgy, Don Ruben, San Jose, Dinagat Islands, PH</a></li>
-                <li><a href="#"><i class="bi bi-envelope me-1"></i>islandgetawaytravelandtour@gmail.com</a></li>
-                <li><a href="#"><i class="bi bi-telephone me-1"></i>+63 9381598187</a></li>
-                <li><a href="#"><i class="bi bi-clock me-1"></i>Mon–Sun, 7AM–8PM</a></li>
+                <li><i class="bi bi-geo-alt"></i> Brgy. Don Ruben, San Jose, Dinagat Islands, PH</li>
+                <li><a href="mailto:islandgetawaytravelandtour@gmail.com"><i class="bi bi-envelope"></i> islandgetawaytravelandtour@gmail.com</a></li>
+                <li><a href="tel:+639381598187"><i class="bi bi-telephone"></i> +63 938 159 8187</a></li>
+                <li><i class="bi bi-clock"></i> Mon–Sun, 7AM–8PM</li>
             </ul>
         </div>
     </div>
-    <div class="footer-bottom">
-        <span>&copy; <?= date('Y') ?> IGTT Services &mdash; We Fix, Print, Build &amp; Code!</span>
-        <div class="badge-pills">
-            <span class="badge-pill"><i class="bi bi-shield-check me-1"></i>Secure</span>
-            <span class="badge-pill"><i class="bi bi-phone me-1"></i>Mobile Ready</span>
-            <span class="badge-pill">CodeIgniter 4</span>
-        </div>
+    <div class="foot-bottom">
+        <span>&copy; <?= date('Y') ?> IGTT Services — We Fix, Print, Build &amp; Code!</span>
+        <span><i class="bi bi-shield-check"></i> Secure &middot; <i class="bi bi-phone"></i> Mobile Ready</span>
     </div>
 </footer>
 

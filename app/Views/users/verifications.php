@@ -72,7 +72,7 @@
                             <?php endif; ?>
                         </td>
                         <td class="text-center">
-                            <a href="<?= base_url('users/' . $c['id'] . '/profile') ?>"
+                            <a href="<?= base_url(role_url_prefix() . '/users/' . $c['id'] . '/profile') ?>"
                                class="btn btn-sm btn-outline-primary">
                                 <i class="bi bi-person-lines-fill me-1"></i>View &amp; Verify
                             </a>

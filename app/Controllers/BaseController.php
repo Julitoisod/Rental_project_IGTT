@@ -66,6 +66,20 @@ abstract class BaseController extends Controller
     }
 
     /**
+     * Get the current role's URL prefix (e.g. /owner, /admin) for building
+     * route-group links and redirects.
+     */
+    protected function rolePrefix(): string
+    {
+        return match (session()->get('role')) {
+            'snd_admin' => '/admin',
+            'owner'     => '/owner',
+            'customer'  => '/customer',
+            default     => '',
+        };
+    }
+
+    /**
      * Validate an uploaded image and return a SAFE, non-executable filename.
      *
      * Enforces real image MIME (not just client-claimed), a whitelisted

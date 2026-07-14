@@ -142,7 +142,7 @@ class WalletController extends BaseController
         $req = $requestModel->find($id);
 
         if (! $req || $req['status'] !== 'pending') {
-            return redirect()->to('/wallet/admin/requests')->with('error', 'Request not found or already actioned.');
+            return redirect()->to('/admin/wallet/requests')->with('error', 'Request not found or already actioned.');
         }
 
         // Credit the customer's wallet
@@ -156,7 +156,7 @@ class WalletController extends BaseController
         );
 
         if ($newBalance === false) {
-            return redirect()->to('/wallet/admin/requests')->with('error', 'Failed to credit wallet.');
+            return redirect()->to('/admin/wallet/requests')->with('error', 'Failed to credit wallet.');
         }
 
         // Mark request as approved
@@ -174,7 +174,7 @@ class WalletController extends BaseController
             '/wallet'
         );
 
-        return redirect()->to('/wallet/admin/requests')
+        return redirect()->to('/admin/wallet/requests')
             ->with('success', '₱' . number_format($req['amount'], 2) . ' approved and credited to customer.');
     }
 
@@ -190,7 +190,7 @@ class WalletController extends BaseController
         $req = $requestModel->find($id);
 
         if (! $req || $req['status'] !== 'pending') {
-            return redirect()->to('/wallet/admin/requests')->with('error', 'Request not found or already actioned.');
+            return redirect()->to('/admin/wallet/requests')->with('error', 'Request not found or already actioned.');
         }
 
         $adminNote = trim($this->request->getPost('admin_note') ?? '');
@@ -216,7 +216,7 @@ class WalletController extends BaseController
             '/wallet'
         );
 
-        return redirect()->to('/wallet/admin/requests')
+        return redirect()->to('/admin/wallet/requests')
             ->with('success', 'Top-up request #' . $id . ' rejected.');
     }
 }

@@ -11,7 +11,7 @@
         </div>
     <?php endif; ?>
 
-    <form action="<?= base_url('users/store') ?>" method="POST">
+    <form action="<?= base_url(role_url_prefix() . '/users/store') ?>" method="POST">
         <?= csrf_field() ?>
 
         <div class="mb-3">
@@ -38,7 +38,7 @@
 
         <div class="d-flex gap-2">
             <button type="submit" class="btn btn-primary"><i class="bi bi-save"></i> Save</button>
-            <a href="<?= base_url('users') ?>" class="btn btn-outline-secondary">Cancel</a>
+            <a href="<?= base_url(role_url_prefix() . '/users') ?>" class="btn btn-outline-secondary">Cancel</a>
         </div>
     </form>
 </div>

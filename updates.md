@@ -53,6 +53,32 @@
 - Added composer.phar to project root (Composer 2.10.2; no global Composer on this machine)
 - Moved hardcoded admin secret code from AuthController to .env (`admin.secretCode`) before publishing code to GitHub
 
+## 2026-07-03
+- Added dedicated **Manage Items** page: sidebar "All Items" now links to `/owner/items` (the full management view with Add/Edit/Delete, search, filters, grid/list) instead of the read-only dashboard grid
+- Fixed Edit/Delete action URLs in `items/index` and ItemController redirects to include the role prefix (`/owner`) — they previously pointed to `/items/*` (no route → 404)
+- Added `rolePrefix()` helper to BaseController
+- Dashboard "Add Item" button replaced with a "Manage Items" link so all item actions live on the one page
+- Fixed 404 after adding a unit: Add/Edit form actions (`items/store`, `items/update`) now include the role prefix; same fix for the items search/filter form, Clear link, and the rental modal URLs
+- Added missing owner routes: `POST /owner/rentals/store`, `GET /owner/rentals/check-availability(-range)` so owners can create rentals from the items page
+- Fixed crash when deleting an item that has rentals (FK constraint 1451): delete is now blocked with a friendly message suggesting to set quantity to 0 instead — rental/payment history is preserved
+- Added Delete button (with confirm dialog) on the Rentals list for returned/cancelled rentals; added matching `POST /admin/rentals/(:num)/delete` route for admins
+- Rentals-list Delete button made one-click (confirm dialog removed by request)
+- Item delete now cascades: finished rentals (returned/cancelled) and reviews are deleted with the item; deletion is only blocked while the item has ACTIVE rentals/bookings
+- "Rental Terms & Details" free-text box on Add/Edit Item replaced with predefined checkboxes (list lives in `ItemController::RENTAL_TERM_OPTIONS`); checked terms are stored in `rental_details` and shown to customers in the item modal
+- Removed "Manage Items" button from the dashboard All Items section (sidebar link is the single entry point)
+- Fixed 404 on bare `/rentals` and `/rentals/{id}` URLs (used by stored notification links): added role-based redirect routes, same pattern as `/dashboard`
+- Extended the bare-path redirects to `/wallet`, `/wallet/topup`, `/profile`, `/notifications` (one loop in Routes.php covers all stored notification links and old views)
+- Fixed broken admin wallet approval paths: `/wallet/admin/requests|approve|reject` → correct `/admin/wallet/...` routes (controller redirects + admin_requests view)
+- Added global `role_url_prefix()` helper (app/Common.php) and prefixed EVERY remaining bare link/form action across views: wallet, notifications, rentals show/return, customer profile, users, categories, payment gateways, reports, reviews — fixes the `POST wallet/topup` 404 and the whole class of unprefixed-URL 404s
+- Added `payment-gateways/for-item` route to owner/admin groups and `users/(:num)/profile(.json)` routes to admin group (shared views link there)
+- Added `GET /admin/wallet` (Store Earnings) route — the sidebar shows the link for admins but only owners had the route
+- **Full route audit** (script cross-checked every generated URL against every defined route). Fixed all remaining gaps:
+  - Controller redirects to bare `/users`, `/categories`, `/payment-gateways` → now role-prefixed via `rolePrefix()`
+  - Store Earnings filter form posted to nonexistent `/store-wallet` → role-prefixed `/wallet`
+  - Admin group given full rentals management routes (create/store/availability/detail.json/return/activate/confirm-payment/cancel-booking), items CRUD, own profile, and reports CSV export — its pages rendered those buttons but the routes didn't exist
+  - Owner group given `rentals/(:num)/cancel-booking` (Cancel Booking button rendered but route missing)
+- Smoke-tested 32 pages across all three roles after the audit: all HTTP 200
+
 ---
 
 *This file tracks all major changes to the SND Rental system. Update this log whenever changes are made.*

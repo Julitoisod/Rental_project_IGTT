@@ -44,7 +44,7 @@
         <div class="balance-label"><i class="bi bi-wallet2 me-1"></i> Wallet Balance</div>
         <div class="balance-amount"><small>₱</small><?= number_format($balance, 2) ?></div>
     </div>
-    <a href="<?= base_url('wallet/topup') ?>" class="btn btn-warning fw-semibold px-4">
+    <a href="<?= base_url(role_url_prefix() . '/wallet/topup') ?>" class="btn btn-warning fw-semibold px-4">
         <i class="bi bi-plus-circle-fill me-1"></i> Top Up
     </a>
 </div>

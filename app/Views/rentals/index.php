@@ -166,6 +166,14 @@ $urlPrefix = match($role) {
                                         <i class="bi bi-box-arrow-in-left"></i> Return
                                     </button>
                                 <?php endif; ?>
+                                <?php if (in_array($r['status'], ['returned', 'cancelled'])): ?>
+                                    <form action="<?= base_url($urlPrefix . '/rentals/' . $r['id'] . '/delete') ?>" method="POST" class="d-inline">
+                                        <?= csrf_field() ?>
+                                        <button class="btn btn-sm btn-outline-danger" title="Delete Rental">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </form>
+                                <?php endif; ?>
                             <?php endif; ?>
                             <?php if (session()->get('role') === 'customer' && $r['status'] === 'booked' && $r['user_id'] == session()->get('user_id')): ?>
                                 <form action="<?= base_url($urlPrefix . '/rentals/' . $r['id'] . '/cancel-booking') ?>" method="POST" class="d-inline"
@@ -515,6 +523,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const content    = document.getElementById('modalContent');
     const errorEl    = document.getElementById('modalError');
     const baseUrl    = '<?= base_url() ?>';
+    const profileUrl = '<?= base_url(role_url_prefix() . '/users') ?>';
 
     document.querySelectorAll('.view-profile-btn').forEach(btn => {
         btn.addEventListener('click', function () {
@@ -526,7 +535,7 @@ document.addEventListener('DOMContentLoaded', function () {
             errorEl.classList.add('d-none');
             document.getElementById('modalAvatar').innerHTML = '…';
 
-            fetch(`${baseUrl}users/${userId}/profile.json`)
+            fetch(`${profileUrl}/${userId}/profile.json`)
                 .then(r => r.json())
                 .then(u => {
                     // Avatar
@@ -578,7 +587,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     }
 
                     // Full profile link
-                    document.getElementById('modalFullProfileLink').href = `${baseUrl}users/${userId}/profile`;
+                    document.getElementById('modalFullProfileLink').href = `${profileUrl}/${userId}/profile`;
 
                     loading.classList.add('d-none');
                     content.classList.remove('d-none');

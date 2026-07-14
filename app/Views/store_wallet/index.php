@@ -126,7 +126,7 @@
 
     <!-- ── Filters ── -->
     <div class="sw-filter-card">
-        <form method="GET" action="<?= base_url('store-wallet') ?>" class="row g-2 align-items-end">
+        <form method="GET" action="<?= base_url(role_url_prefix() . '/wallet') ?>" class="row g-2 align-items-end">
             <div class="col-sm-6 col-md-3">
                 <label class="form-label form-label-sm mb-1" style="font-size:.78rem;font-weight:600;color:#555;">
                     <i class="bi bi-search"></i> Search Customer / Item
@@ -164,7 +164,7 @@
             <div class="col-auto">
                 <button class="btn btn-sm btn-primary"><i class="bi bi-funnel"></i> Filter</button>
                 <?php if (array_filter($filters)): ?>
-                    <a href="<?= base_url('store-wallet') ?>" class="btn btn-sm btn-outline-secondary">
+                    <a href="<?= base_url(role_url_prefix() . '/wallet') ?>" class="btn btn-sm btn-outline-secondary">
                         <i class="bi bi-x-lg"></i> Clear
                     </a>
                 <?php endif; ?>
@@ -210,7 +210,7 @@
                             <div style="font-size:.73rem;color:#888;"><?= esc($t['customer_email']) ?></div>
                         </td>
                         <td>
-                            <a href="<?= base_url('dashboard') ?>" class="text-decoration-none fw-semibold" style="font-size:.88rem;">
+                            <a href="<?= base_url(role_url_prefix() . '/items') ?>" class="text-decoration-none fw-semibold" style="font-size:.88rem;">
                                 <?= esc($t['item_name']) ?>
                             </a>
                         </td>

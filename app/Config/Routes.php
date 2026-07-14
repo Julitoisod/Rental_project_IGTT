@@ -26,6 +26,23 @@ $routes->get('dashboard', static function () {
     });
 }, ['filter' => 'auth']);
 
+// Bare-path redirects: stored notification links and older views use
+// unprefixed URLs — bounce each to the logged-in role's own section.
+$bareRedirects = [
+    'rentals'        => ['snd_admin' => '/admin/rentals',         'owner' => '/owner/rentals',       'customer' => '/customer/rentals'],
+    'rentals/(:num)' => ['snd_admin' => '/admin/rentals/%s',      'owner' => '/owner/rentals/%s',    'customer' => '/customer/rentals/%s'],
+    'wallet'         => ['snd_admin' => '/admin/wallet/requests', 'owner' => '/owner/wallet',        'customer' => '/customer/wallet'],
+    'wallet/topup'   => ['snd_admin' => '/admin/wallet/requests', 'owner' => '/owner/wallet',        'customer' => '/customer/wallet/topup'],
+    'profile'        => ['snd_admin' => '/admin/profile',         'owner' => '/owner/profile',       'customer' => '/customer/profile'],
+    'notifications'  => ['snd_admin' => '/admin/notifications',   'owner' => '/owner/notifications', 'customer' => '/customer/notifications'],
+];
+foreach ($bareRedirects as $barePath => $map) {
+    $routes->get($barePath, static function ($id = null) use ($map) {
+        $target = $map[session()->get('role') ?? ''] ?? '/portal';
+        return redirect()->to($id === null ? $target : sprintf($target, $id));
+    }, ['filter' => 'auth']);
+}
+
 // Portal selection page
 $routes->get('portal', 'AuthController::portal');
 
@@ -129,6 +146,9 @@ $routes->group('owner', ['filter' => 'owner'], static function ($routes) {
     // Rentals
     $routes->get('rentals', 'RentalController::index');
     $routes->get('rentals/create', 'RentalController::create');
+    $routes->post('rentals/store', 'RentalController::store');
+    $routes->get('rentals/check-availability', 'RentalController::checkAvailability');
+    $routes->get('rentals/check-availability-range', 'RentalController::checkAvailabilityRange');
     $routes->get('rentals/(:num)', 'RentalController::show/$1');
     $routes->get('rentals/(:num)/detail.json', 'RentalController::detailJson/$1');
     $routes->get('rentals/(:num)/return', 'RentalController::confirmReturn/$1');
@@ -137,6 +157,7 @@ $routes->group('owner', ['filter' => 'owner'], static function ($routes) {
     $routes->post('rentals/(:num)/activate', 'RentalController::activate/$1');
     $routes->post('rentals/(:num)/delete', 'RentalController::delete/$1');
     $routes->post('rentals/(:num)/confirm-payment', 'RentalController::confirmPayment/$1');
+    $routes->post('rentals/(:num)/cancel-booking', 'RentalController::cancelBooking/$1');
 
     // Reports
     $routes->get('reports', 'ReportController::index');
@@ -147,6 +168,7 @@ $routes->group('owner', ['filter' => 'owner'], static function ($routes) {
 
     // Payment Gateways
     $routes->get('payment-gateways', 'PaymentGatewayController::index');
+    $routes->get('payment-gateways/for-item/(:num)', 'PaymentGatewayController::forItem/$1');
     $routes->post('payment-gateways/store', 'PaymentGatewayController::store');
     $routes->get('payment-gateways/edit/(:num)', 'PaymentGatewayController::edit/$1');
     $routes->post('payment-gateways/update/(:num)', 'PaymentGatewayController::update/$1');
@@ -202,29 +224,58 @@ $routes->group('admin', ['filter' => 'admin'], static function ($routes) {
     $routes->get('verifications', 'UserController::verificationList');
 
     // Wallet management
+    $routes->get('wallet', 'StoreWalletController::index');
     $routes->get('wallet/requests', 'WalletController::topupRequests');
     $routes->post('wallet/approve/(:num)', 'WalletController::approveTopup/$1');
     $routes->post('wallet/reject/(:num)', 'WalletController::rejectTopup/$1');
 
-    // Rentals (view all)
+    // Rentals (full management, same as owner)
     $routes->get('rentals', 'RentalController::index');
+    $routes->get('rentals/create', 'RentalController::create');
+    $routes->post('rentals/store', 'RentalController::store');
+    $routes->get('rentals/check-availability', 'RentalController::checkAvailability');
+    $routes->get('rentals/check-availability-range', 'RentalController::checkAvailabilityRange');
     $routes->get('rentals/(:num)', 'RentalController::show/$1');
+    $routes->get('rentals/(:num)/detail.json', 'RentalController::detailJson/$1');
+    $routes->get('rentals/(:num)/return', 'RentalController::confirmReturn/$1');
+    $routes->get('rentals/(:num)/return-info', 'RentalController::returnInfo/$1');
+    $routes->post('rentals/(:num)/return', 'RentalController::processReturn/$1');
+    $routes->post('rentals/(:num)/activate', 'RentalController::activate/$1');
+    $routes->post('rentals/(:num)/delete', 'RentalController::delete/$1');
+    $routes->post('rentals/(:num)/confirm-payment', 'RentalController::confirmPayment/$1');
+    $routes->post('rentals/(:num)/cancel-booking', 'RentalController::cancelBooking/$1');
 
-    // Items (view all)
+    // Items (same management as owner; scoped to own items)
     $routes->get('items', 'ItemController::index');
+    $routes->get('items/create', 'ItemController::create');
+    $routes->post('items/store', 'ItemController::store');
+    $routes->get('items/edit/(:num)', 'ItemController::edit/$1');
+    $routes->post('items/update/(:num)', 'ItemController::update/$1');
+    $routes->post('items/delete/(:num)', 'ItemController::delete/$1');
 
     // Reports
     $routes->get('reports', 'ReportController::index');
+    $routes->get('reports/export/csv', 'ReportController::exportCSV');
 
     // Reviews (delete)
     $routes->post('reviews/delete/(:num)', 'ReviewController::delete/$1');
 
     // Payment Gateways
     $routes->get('payment-gateways', 'PaymentGatewayController::index');
+    $routes->get('payment-gateways/for-item/(:num)', 'PaymentGatewayController::forItem/$1');
     $routes->post('payment-gateways/store', 'PaymentGatewayController::store');
     $routes->get('payment-gateways/edit/(:num)', 'PaymentGatewayController::edit/$1');
     $routes->post('payment-gateways/update/(:num)', 'PaymentGatewayController::update/$1');
     $routes->post('payment-gateways/delete/(:num)', 'PaymentGatewayController::delete/$1');
+
+    // Customer profile view (shared rentals views link here)
+    $routes->get('users/(:num)/profile', 'UserController::viewCustomerProfile/$1');
+    $routes->get('users/(:num)/profile.json', 'UserController::profileJson/$1');
+
+    // Own profile
+    $routes->get('profile', 'UserController::profile');
+    $routes->post('profile/update', 'UserController::updateProfile');
+    $routes->post('profile/ocr-extract', 'UserController::ocrExtract');
 
     // Notifications
     $routes->get('notifications', 'NotificationController::index');

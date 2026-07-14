@@ -345,13 +345,13 @@ class UserController extends BaseController
             'role'     => $this->request->getPost('role'),
         ]);
 
-        return redirect()->to('/users')->with('success', 'User created successfully.');
+        return redirect()->to($this->rolePrefix() . '/users')->with('success', 'User created successfully.');
     }
 
     public function edit(int $id)
     {
         $user = $this->model->find($id);
-        if (! $user) return redirect()->to('/users')->with('error', 'User not found.');
+        if (! $user) return redirect()->to($this->rolePrefix() . '/users')->with('error', 'User not found.');
 
         return view('users/edit', ['pageTitle' => 'Edit User', 'user' => $user]);
     }
@@ -359,7 +359,7 @@ class UserController extends BaseController
     public function update(int $id)
     {
         $user = $this->model->find($id);
-        if (! $user) return redirect()->to('/users')->with('error', 'User not found.');
+        if (! $user) return redirect()->to($this->rolePrefix() . '/users')->with('error', 'User not found.');
 
         $rules = [
             'name'  => 'required|min_length[3]|max_length[100]',
@@ -386,19 +386,19 @@ class UserController extends BaseController
         }
 
         $this->model->update($id, $updateData);
-        return redirect()->to('/users')->with('success', 'User updated successfully.');
+        return redirect()->to($this->rolePrefix() . '/users')->with('success', 'User updated successfully.');
     }
 
     public function delete(int $id)
     {
         // Prevent deleting own account
         if ($id === (int) session()->get('user_id')) {
-            return redirect()->to('/users')->with('error', 'You cannot delete your own account.');
+            return redirect()->to($this->rolePrefix() . '/users')->with('error', 'You cannot delete your own account.');
         }
 
         $user = $this->model->find($id);
         if (!$user) {
-            return redirect()->to('/users')->with('error', 'User not found.');
+            return redirect()->to($this->rolePrefix() . '/users')->with('error', 'User not found.');
         }
 
         $db = \Config\Database::connect();
@@ -421,9 +421,9 @@ class UserController extends BaseController
         $db->transComplete();
 
         if (!$db->transStatus()) {
-            return redirect()->to('/users')->with('error', 'Failed to delete user. Please try again.');
+            return redirect()->to($this->rolePrefix() . '/users')->with('error', 'Failed to delete user. Please try again.');
         }
 
-        return redirect()->to('/users')->with('success', 'User and all related data deleted.');
+        return redirect()->to($this->rolePrefix() . '/users')->with('success', 'User and all related data deleted.');
     }
 }

@@ -1,4 +1,12 @@
 <?php $this->extend('layout/main'); $this->section('content'); ?>
+<?php
+$urlPrefix = match(session()->get('role')) {
+    'snd_admin' => '/admin',
+    'owner' => '/owner',
+    'customer' => '/customer',
+    default => '',
+};
+?>
 
 <div class="row justify-content-center"><div class="col-lg-6">
 <div class="card-section">
@@ -10,7 +18,7 @@
         </div>
     <?php endif; ?>
 
-    <form action="<?= base_url('items/store') ?>" method="POST" enctype="multipart/form-data">
+    <form action="<?= base_url($urlPrefix . '/items/store') ?>" method="POST" enctype="multipart/form-data">
         <?= csrf_field() ?>
 
         <div class="mb-3">
@@ -80,8 +88,16 @@
 
                 <!-- Rental Details -->
                 <div class="mb-3">
-                    <label class="form-label fw-semibold">Rental Terms & Details</label>
-                    <textarea name="rental_details" class="form-control" rows="3" placeholder="e.g., Deposit required, Late return policy, Damage liability, etc."><?= old('rental_details') ?></textarea>
+                    <label class="form-label fw-semibold">Rental Terms <span class="text-muted fw-normal small">(check the ones that apply — shown to the customer)</span></label>
+                    <?php $oldTerms = (array) (old('rental_terms') ?? []); ?>
+                    <?php foreach ($termOptions as $i => $term): ?>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="rental_terms[]"
+                                   id="term<?= $i ?>" value="<?= esc($term) ?>"
+                                   <?= in_array($term, $oldTerms) ? 'checked' : '' ?>>
+                            <label class="form-check-label" for="term<?= $i ?>"><?= esc($term) ?></label>
+                        </div>
+                    <?php endforeach; ?>
                 </div>
             </div>
         </div>
@@ -90,23 +106,23 @@
             <div class="row g-2">
                 <div class="col-12">
                     <label class="form-label text-muted small mb-1">Photo 1 (Main)</label>
-                    <input type="file" name="image" class="form-control" accept="image/jpeg,image/png,image/webp">
+                    <input type="file" name="image" class="form-control" accept="image/jpeg,image/png,image/gif,image/webp">
                 </div>
                 <div class="col-12">
                     <label class="form-label text-muted small mb-1">Photo 2</label>
-                    <input type="file" name="image2" class="form-control" accept="image/jpeg,image/png,image/webp">
+                    <input type="file" name="image2" class="form-control" accept="image/jpeg,image/png,image/gif,image/webp">
                 </div>
                 <div class="col-12">
                     <label class="form-label text-muted small mb-1">Photo 3</label>
-                    <input type="file" name="image3" class="form-control" accept="image/jpeg,image/png,image/webp">
+                    <input type="file" name="image3" class="form-control" accept="image/jpeg,image/png,image/gif,image/webp">
                 </div>
             </div>
-            <div class="form-text">Max 2 MB each. Accepted: JPG, PNG, WEBP</div>
+            <div class="form-text">Max 5 MB each. Accepted: JPG, PNG, GIF, WEBP</div>
         </div>
 
         <div class="d-flex gap-2">
             <button type="submit" class="btn btn-primary"><i class="bi bi-save"></i> Save</button>
-            <a href="<?= base_url('dashboard') ?>" class="btn btn-outline-secondary">Cancel</a>
+            <a href="<?= base_url($urlPrefix . '/items') ?>" class="btn btn-outline-secondary">Cancel</a>
         </div>
     </form>
 </div>

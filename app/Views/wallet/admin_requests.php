@@ -69,7 +69,7 @@ $pendingCount = count($pending);
                 <td>
                     <div class="d-flex gap-2 flex-wrap">
                         <!-- Approve -->
-                        <form method="POST" action="<?= base_url('wallet/admin/approve/' . $req['id']) ?>"
+                        <form method="POST" action="<?= base_url(role_url_prefix() . '/wallet/approve/' . $req['id']) ?>"
                               data-confirm="Approve ₱<?= number_format($req['amount'], 2) ?> top-up for <?= esc(addslashes($req['user_name'])) ?>?"
                               data-confirm-type="info"
                               data-confirm-title="Approve Top-Up"
@@ -193,7 +193,7 @@ $pendingCount = count($pending);
 
 <script>
 function openRejectModal(id, name, amount) {
-    document.getElementById('rejectForm').action = '<?= base_url('wallet/admin/reject/') ?>' + id;
+    document.getElementById('rejectForm').action = '<?= base_url(role_url_prefix() . '/wallet/reject/') ?>' + id;
     document.getElementById('rejectCustomerName').textContent = name;
     document.getElementById('rejectAmount').textContent = '₱' + amount;
     new bootstrap.Modal(document.getElementById('rejectModal')).show();

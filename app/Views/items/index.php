@@ -148,7 +148,7 @@ $urlPrefix = match($role) {
     </div>
 
     <!-- Search & Filter bar -->
-    <form class="mb-4" method="GET" action="<?= base_url('items') ?>" id="filterForm">
+    <form class="mb-4" method="GET" action="<?= base_url($urlPrefix . '/items') ?>" id="filterForm">
         <!-- Row 1: keyword + search btn -->
         <div class="row g-2 align-items-end mb-2">
             <div class="col">
@@ -158,7 +158,7 @@ $urlPrefix = match($role) {
             <div class="col-auto">
                 <button class="btn btn-sm btn-primary"><i class="bi bi-search"></i> Search</button>
                 <?php if ($search || $filterCat || $filterFrom || $filterTo || $filterAvail || $sortBy): ?>
-                    <a href="<?= base_url('items') ?>" class="btn btn-sm btn-outline-secondary">
+                    <a href="<?= base_url($urlPrefix . '/items') ?>" class="btn btn-sm btn-outline-secondary">
                         <i class="bi bi-x-lg"></i> Clear
                     </a>
                 <?php endif; ?>
@@ -324,10 +324,10 @@ $urlPrefix = match($role) {
                         </div>
                         <?php if ($canManage): ?>
                         <div class="card-actions" onclick="event.stopPropagation()">
-                            <a href="<?= base_url('items/edit/' . $item['id']) ?>" class="btn btn-sm btn-outline-primary">
+                            <a href="<?= base_url($urlPrefix . '/items/edit/' . $item['id']) ?>" class="btn btn-sm btn-outline-primary">
                                 <i class="bi bi-pencil"></i> Edit
                             </a>
-                            <form action="<?= base_url('items/delete/' . $item['id']) ?>" method="POST" style="flex:1"
+                            <form action="<?= base_url($urlPrefix . '/items/delete/' . $item['id']) ?>" method="POST" style="flex:1"
                                   data-confirm="Delete this item? This cannot be undone."
                                   data-confirm-type="danger"
                                   data-confirm-title="Delete Item"
@@ -419,10 +419,10 @@ $urlPrefix = match($role) {
                             </td>
                             <?php if ($canManage): ?>
                             <td>
-                                <a href="<?= base_url('items/edit/' . $item['id']) ?>" class="btn btn-sm btn-outline-secondary">
+                                <a href="<?= base_url($urlPrefix . '/items/edit/' . $item['id']) ?>" class="btn btn-sm btn-outline-secondary">
                                     <i class="bi bi-pencil"></i>
                                 </a>
-                                <form action="<?= base_url('items/delete/' . $item['id']) ?>" method="POST" class="d-inline"
+                                <form action="<?= base_url($urlPrefix . '/items/delete/' . $item['id']) ?>" method="POST" class="d-inline"
                                       data-confirm="Delete this item? This cannot be undone."
                                       data-confirm-type="danger"
                                       data-confirm-title="Delete Item"
@@ -555,14 +555,14 @@ if (saved === 'list') {
                     <div>
                         <div class="fw-bold mb-1">Account Verification Required</div>
                         <p class="mb-2" style="font-size:0.85rem;">You must verify your <strong>Email</strong> and <strong>ID</strong> before you can rent or book any item.</p>
-                        <a href="<?= base_url('profile') ?>" class="btn btn-sm btn-warning fw-semibold">
+                        <a href="<?= base_url($urlPrefix . '/profile') ?>" class="btn btn-sm btn-warning fw-semibold">
                             <i class="bi bi-person-check me-1"></i> Go to My Profile &amp; Verify
                         </a>
                     </div>
                 </div>
                 <?php else: ?>
 
-                <form action="<?= base_url('rentals/store') ?>" method="POST" id="modalRentalForm" enctype="multipart/form-data">
+                <form action="<?= base_url($urlPrefix . '/rentals/store') ?>" method="POST" id="modalRentalForm" enctype="multipart/form-data">
                     <?= csrf_field() ?>
                     <input type="hidden" name="from" value="items">
                     <input type="hidden" name="item_id" id="modalItemId">
@@ -645,7 +645,7 @@ if (saved === 'list') {
                         </div>
                         <div id="walletInsufficientMsg" class="mt-2 small text-danger fw-semibold" style="display:none;">
                             <i class="bi bi-exclamation-triangle me-1"></i> Insufficient wallet balance.
-                            <a href="<?= base_url('wallet/topup') ?>" target="_blank">Top up now</a>
+                            <a href="<?= base_url($urlPrefix . '/wallet/topup') ?>" target="_blank">Top up now</a>
                         </div>
                     </div>
                     <?php endif; ?>
@@ -1039,7 +1039,7 @@ function _checkTimeSlot(itemId, rentDate, returnDate) {
     const availDiv = document.getElementById('modalAvailStatus');
     const bookBtn  = document.getElementById('modalBookBtn');
     const rentBtn  = document.getElementById('modalSubmitBtn');
-    const url = `<?= base_url('rentals/check-availability') ?>?item_id=${itemId}&rent_date=${encodeURIComponent(rentDate)}&return_date=${encodeURIComponent(returnDate)}`;
+    const url = `<?= base_url($urlPrefix . '/rentals/check-availability') ?>?item_id=${itemId}&rent_date=${encodeURIComponent(rentDate)}&return_date=${encodeURIComponent(returnDate)}`;
     fetch(url)
         .then(r => r.json())
         .then(data => {
@@ -1113,7 +1113,7 @@ function checkAvailability() {
     
     resultsDiv.innerHTML = '<div class="text-center"><div class="spinner-border spinner-border-sm text-primary" role="status"><span class="visually-hidden">Loading...</span></div> Loading calendar...</div>';
     
-    const url = `<?= base_url('rentals/check-availability-range') ?>?item_id=${itemId}&start_date=${startDate}&end_date=${endDate}`;
+    const url = `<?= base_url($urlPrefix . '/rentals/check-availability-range') ?>?item_id=${itemId}&start_date=${startDate}&end_date=${endDate}`;
     fetch(url)
         .then(r => r.json())
         .then(data => {
@@ -1390,7 +1390,7 @@ function handleRentNow() {
     const listDiv = document.getElementById('pmtGatewayList');
     listDiv.innerHTML = '<div class="text-center text-muted py-3"><div class="spinner-border spinner-border-sm me-1"></div> Loading…</div>';
 
-    fetch(`<?= base_url('payment-gateways/for-item') ?>/` + itemId)
+    fetch(`<?= base_url($urlPrefix . '/payment-gateways/for-item') ?>/` + itemId)
         .then(r => r.json())
         .then(data => {
             if (!data.gateways || data.gateways.length === 0) {

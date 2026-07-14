@@ -54,7 +54,7 @@ class PaymentGatewayController extends BaseController
             'qr_code'        => $qrFilename,
         ]);
 
-        return redirect()->to('/payment-gateways')->with('success', 'Payment gateway added successfully.');
+        return redirect()->to($this->rolePrefix() . '/payment-gateways')->with('success', 'Payment gateway added successfully.');
     }
 
     public function edit(int $id)
@@ -62,7 +62,7 @@ class PaymentGatewayController extends BaseController
         $ownerId = (int) session()->get('user_id');
         $gateway = $this->model->where('id', $id)->where('owner_id', $ownerId)->first();
         if (! $gateway) {
-            return redirect()->to('/payment-gateways')->with('error', 'Gateway not found.');
+            return redirect()->to($this->rolePrefix() . '/payment-gateways')->with('error', 'Gateway not found.');
         }
 
         return $this->response->setJSON($gateway);
@@ -73,7 +73,7 @@ class PaymentGatewayController extends BaseController
         $ownerId = (int) session()->get('user_id');
         $gateway = $this->model->where('id', $id)->where('owner_id', $ownerId)->first();
         if (! $gateway) {
-            return redirect()->to('/payment-gateways')->with('error', 'Gateway not found.');
+            return redirect()->to($this->rolePrefix() . '/payment-gateways')->with('error', 'Gateway not found.');
         }
 
         $rules = [
@@ -105,7 +105,7 @@ class PaymentGatewayController extends BaseController
             'qr_code'        => $qrFilename,
         ]);
 
-        return redirect()->to('/payment-gateways')->with('success', 'Payment gateway updated.');
+        return redirect()->to($this->rolePrefix() . '/payment-gateways')->with('success', 'Payment gateway updated.');
     }
 
     public function delete(int $id)
@@ -113,7 +113,7 @@ class PaymentGatewayController extends BaseController
         $ownerId = (int) session()->get('user_id');
         $gateway = $this->model->where('id', $id)->where('owner_id', $ownerId)->first();
         if (! $gateway) {
-            return redirect()->to('/payment-gateways')->with('error', 'Gateway not found.');
+            return redirect()->to($this->rolePrefix() . '/payment-gateways')->with('error', 'Gateway not found.');
         }
 
         if ($gateway['qr_code'] && file_exists(FCPATH . 'uploads/qrcodes/' . $gateway['qr_code'])) {
@@ -121,7 +121,7 @@ class PaymentGatewayController extends BaseController
         }
 
         $this->model->delete($id);
-        return redirect()->to('/payment-gateways')->with('success', 'Payment gateway deleted.');
+        return redirect()->to($this->rolePrefix() . '/payment-gateways')->with('success', 'Payment gateway deleted.');
     }
 
     /**

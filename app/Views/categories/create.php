@@ -10,7 +10,7 @@
         </div>
     <?php endif; ?>
 
-    <form action="<?= base_url('categories/store') ?>" method="POST">
+    <form action="<?= base_url(role_url_prefix() . '/categories/store') ?>" method="POST">
         <?= csrf_field() ?>
         <div class="mb-3">
             <label class="form-label fw-semibold">Category Name</label>
@@ -18,7 +18,7 @@
         </div>
         <div class="d-flex gap-2">
             <button type="submit" class="btn btn-primary"><i class="bi bi-save"></i> Save</button>
-            <a href="<?= base_url('categories') ?>" class="btn btn-outline-secondary">Cancel</a>
+            <a href="<?= base_url(role_url_prefix() . '/categories') ?>" class="btn btn-outline-secondary">Cancel</a>
         </div>
     </form>
 </div>

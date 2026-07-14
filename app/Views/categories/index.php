@@ -3,7 +3,7 @@
 <div class="card-section">
     <div class="section-title">
         <i class="bi bi-tags text-primary"></i> Categories
-        <a href="<?= base_url('categories/create') ?>" class="btn btn-primary btn-sm ms-auto">
+        <a href="<?= base_url(role_url_prefix() . '/categories/create') ?>" class="btn btn-primary btn-sm ms-auto">
             <i class="bi bi-plus-lg"></i> Add Category
         </a>
     </div>
@@ -19,10 +19,10 @@
                         <td><?= $c['id'] ?></td>
                         <td><?= esc($c['name']) ?></td>
                         <td>
-                            <a href="<?= base_url('categories/edit/' . $c['id']) ?>" class="btn btn-sm btn-outline-secondary">
+                            <a href="<?= base_url(role_url_prefix() . '/categories/edit/' . $c['id']) ?>" class="btn btn-sm btn-outline-secondary">
                                 <i class="bi bi-pencil"></i>
                             </a>
-                            <form action="<?= base_url('categories/delete/' . $c['id']) ?>" method="POST" class="d-inline"
+                            <form action="<?= base_url(role_url_prefix() . '/categories/delete/' . $c['id']) ?>" method="POST" class="d-inline"
                                   data-confirm="Delete this category? This cannot be undone."
                                   data-confirm-type="danger"
                                   data-confirm-title="Delete Category"
