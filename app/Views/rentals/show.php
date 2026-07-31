@@ -10,6 +10,12 @@
                    class="btn btn-sm btn-outline-primary">
                     <i class="bi bi-person-badge me-1"></i> View Customer Profile
                 </a>
+                <?php if ($rental['status'] !== 'awaiting_payment'): ?>
+                    <a href="<?= base_url(role_url_prefix() . '/rentals/' . $rental['id'] . '/contract') ?>"
+                       target="_blank" class="btn btn-sm btn-outline-danger">
+                        <i class="bi bi-file-earmark-text me-1"></i> Print Contract
+                    </a>
+                <?php endif; ?>
             <?php endif; ?>
             <a href="<?= base_url(role_url_prefix() . '/rentals') ?>" class="btn btn-sm btn-outline-secondary">
                 <i class="bi bi-arrow-left"></i> Back

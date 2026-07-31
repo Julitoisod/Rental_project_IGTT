@@ -482,6 +482,34 @@ class RentalController extends BaseController
         ]);
     }
 
+    /**
+     * Printable rental agreement — owner/admin only, and only once payment
+     * has been confirmed (not while still awaiting_payment).
+     */
+    public function contract(int $id)
+    {
+        $rental = $this->model->getWithRelations()->where('rentals.id', $id)->first();
+        if (! $rental) return redirect()->to($this->rentalsUrl())->with('error', 'Rental not found.');
+
+        if ($this->isForeignOwnerRental($rental)) {
+            return redirect()->to($this->rentalsUrl())->with('error', 'You can only manage rentals for your own items.');
+        }
+        if ($rental['status'] === 'awaiting_payment') {
+            return redirect()->to($this->rentalsUrl() . '/' . $id)->with('error', 'Contract is available once payment is confirmed.');
+        }
+
+        $renter = (new UserModel())->find($rental['user_id']);
+        $owner  = (new UserModel())->find($rental['item_owner_id']);
+        $item   = (new ItemModel())->find($rental['item_id']);
+
+        return view('rentals/contract', [
+            'rental' => $rental,
+            'renter' => $renter,
+            'owner'  => $owner,
+            'item'   => $item,
+        ]);
+    }
+
     public function detailJson(int $id)
     {
         $rental = $this->model->getWithRelations()->where('rentals.id', $id)->first();

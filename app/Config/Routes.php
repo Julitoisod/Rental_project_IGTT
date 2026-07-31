@@ -153,6 +153,7 @@ $routes->group('owner', ['filter' => 'owner'], static function ($routes) {
     $routes->get('rentals/(:num)/detail.json', 'RentalController::detailJson/$1');
     $routes->get('rentals/(:num)/return', 'RentalController::confirmReturn/$1');
     $routes->get('rentals/(:num)/return-info', 'RentalController::returnInfo/$1');
+    $routes->get('rentals/(:num)/contract', 'RentalController::contract/$1');
     $routes->post('rentals/(:num)/return', 'RentalController::processReturn/$1');
     $routes->post('rentals/(:num)/activate', 'RentalController::activate/$1');
     $routes->post('rentals/(:num)/delete', 'RentalController::delete/$1');
@@ -239,6 +240,7 @@ $routes->group('admin', ['filter' => 'admin'], static function ($routes) {
     $routes->get('rentals/(:num)/detail.json', 'RentalController::detailJson/$1');
     $routes->get('rentals/(:num)/return', 'RentalController::confirmReturn/$1');
     $routes->get('rentals/(:num)/return-info', 'RentalController::returnInfo/$1');
+    $routes->get('rentals/(:num)/contract', 'RentalController::contract/$1');
     $routes->post('rentals/(:num)/return', 'RentalController::processReturn/$1');
     $routes->post('rentals/(:num)/activate', 'RentalController::activate/$1');
     $routes->post('rentals/(:num)/delete', 'RentalController::delete/$1');
