@@ -445,7 +445,7 @@ class AuthController extends BaseController
         $message .= "If you didn't request this, please ignore this email.\n\n";
         $message .= "Regards,\nIslands Getaway Travel and Tours";
 
-        $emailService = \CodeIgniter\Email\Email::initialize($emailConfig);
+        $emailService = new \CodeIgniter\Email\Email($emailConfig);
         $emailService->setFrom($emailConfig->fromEmail, $emailConfig->fromName);
         $emailService->setTo($email);
         $emailService->setSubject('Password Reset Code - IGTT');
@@ -589,7 +589,7 @@ class AuthController extends BaseController
         try {
             $config = config('Email');
 
-            $email = \CodeIgniter\Email\Email::initialize($config);
+            $email = new \CodeIgniter\Email\Email($config);
             $email->setFrom($config->fromEmail, $config->fromName);
             $email->setTo($toEmail);
             $email->setSubject('Your SND Rental Verification Code — ' . $code);
