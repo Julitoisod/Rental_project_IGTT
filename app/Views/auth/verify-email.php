@@ -12,7 +12,7 @@
 
         body {
             min-height: 100vh;
-            background: #e8eaf6;
+            background: #f5efed;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -25,11 +25,11 @@
             background: #fff;
             border-radius: 22px;
             overflow: hidden;
-            box-shadow: 0 20px 60px rgba(21, 56, 150, 0.20);
+            box-shadow: 0 20px 60px rgba(156, 11, 9, 0.20);
         }
 
         .verify-head {
-            background: linear-gradient(135deg, #0d2c8a 0%, #2979ff 100%);
+            background: linear-gradient(135deg, #5a0808 0%, #9c0b09 55%, #c62828 100%);
             padding: 36px 40px 28px;
             text-align: center;
             color: #fff;
@@ -77,17 +77,17 @@
             text-align: center;
             font-size: 1.6rem;
             font-weight: 700;
-            color: #0d2c8a;
-            border: 2px solid #c5cdf0;
+            color: #9c0b09;
+            border: 2px solid #e8c5c4;
             border-radius: 10px;
             outline: none;
             transition: border-color .15s, box-shadow .15s;
-            background: #f8f9ff;
+            background: #fff8f7;
         }
 
         .code-inputs input:focus {
-            border-color: #2979ff;
-            box-shadow: 0 0 0 3px rgba(41,121,255,.15);
+            border-color: #c62828;
+            box-shadow: 0 0 0 3px rgba(198,40,40,.15);
             background: #fff;
         }
 
@@ -97,7 +97,7 @@
             font-size: 1rem;
             font-weight: 600;
             border-radius: 10px;
-            background: linear-gradient(135deg, #0d2c8a, #2979ff);
+            background: linear-gradient(90deg, #5a0808, #9c0b09);
             border: none;
             color: #fff;
             transition: opacity .15s;
@@ -115,7 +115,7 @@
         .resend-wrap button {
             background: none;
             border: none;
-            color: #2979ff;
+            color: #9c0b09;
             font-weight: 600;
             cursor: pointer;
             padding: 0;
@@ -123,19 +123,19 @@
             text-decoration: underline;
         }
 
-        .resend-wrap button:hover { color: #0d2c8a; }
+        .resend-wrap button:hover { color: #5a0808; }
 
         .email-badge {
             display: inline-flex;
             align-items: center;
             gap: 6px;
-            background: #eef0fb;
-            border: 1px solid #c5cdf0;
+            background: #fbeceb;
+            border: 1px solid #e8c5c4;
             border-radius: 20px;
             padding: 5px 14px;
             font-size: .85rem;
             font-weight: 600;
-            color: #0d2c8a;
+            color: #9c0b09;
         }
     </style>
 </head>
