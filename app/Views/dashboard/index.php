@@ -35,6 +35,18 @@ $urlPrefix = match($role) {
         box-shadow: 0 4px 18px rgba(0,0,0,0.08);
         transition: transform 0.2s, box-shadow 0.2s;
     }
+
+    .modal-thumb {
+        opacity: 0.65;
+        transition: opacity 0.15s, border-color 0.15s;
+    }
+    .modal-thumb:hover {
+        opacity: 1;
+    }
+    .modal-thumb.active {
+        opacity: 1;
+        border-color: #9c0b09 !important;
+    }
     .item-card:hover {
         transform: translateY(-4px);
         box-shadow: 0 10px 30px rgba(0,0,0,0.14);
@@ -268,12 +280,19 @@ function showItemModal(itemId) {
     if (imgUrls.length > 0) {
         const alt = card.dataset.itemName || '';
         imgContainer.classList.remove('py-5');
-        imgContainer.innerHTML = '<div class="d-flex gap-2 flex-wrap justify-content-center">' +
-            imgUrls.map(function (url, i) {
-                return '<img src="' + url + '" class="rounded" alt="' + alt + '" ' +
-                    'style="' + (i === 0 ? 'width:100%;max-height:220px;object-fit:cover;' : 'width:70px;height:70px;object-fit:cover;') + '">';
-            }).join('') +
-            '</div>';
+        imgContainer.innerHTML =
+            '<img id="modalItemMainImg" src="' + imgUrls[0] + '" class="rounded" alt="' + alt + '" ' +
+            'style="width:100%;max-height:380px;object-fit:cover;">' +
+            (imgUrls.length > 1
+                ? '<div class="d-flex gap-2 flex-wrap justify-content-center mt-2">' +
+                    imgUrls.map(function (url, i) {
+                        return '<img src="' + url + '" class="rounded modal-thumb' + (i === 0 ? ' active' : '') + '" alt="' + alt + '" ' +
+                            'onclick="event.stopPropagation(); document.getElementById(\'modalItemMainImg\').src=this.src; ' +
+                            'this.closest(\'.d-flex\').querySelectorAll(\'.modal-thumb\').forEach(function(t){t.classList.remove(\'active\')}); this.classList.add(\'active\');" ' +
+                            'style="width:64px;height:64px;object-fit:cover;cursor:pointer;border:2px solid transparent;">';
+                    }).join('') +
+                    '</div>'
+                : '');
     } else {
         imgContainer.classList.add('py-5');
         imgContainer.innerHTML = '<i class="bi bi-image fs-1 text-secondary"></i>';
