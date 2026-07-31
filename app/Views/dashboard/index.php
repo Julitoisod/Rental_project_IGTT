@@ -135,6 +135,8 @@ $urlPrefix = match($role) {
                          data-item-cat="<?= esc($item['category_name'] ?? '') ?>"
                          data-item-qty="<?= $item['quantity'] ?>"
                          data-item-img="<?= $item['image'] ? base_url('uploads/items/' . $item['image']) : '' ?>"
+                         data-item-img2="<?= ! empty($item['image2']) ? base_url('uploads/items/' . $item['image2']) : '' ?>"
+                         data-item-img3="<?= ! empty($item['image3']) ? base_url('uploads/items/' . $item['image3']) : '' ?>"
                          data-rate1hours="<?= $rOpt1['hours'] ?? 12 ?>"
                          data-rate1price="<?= $rOpt1['price'] ?? 0 ?>"
                          data-rate2hours="<?= $rOpt2['hours'] ?? 24 ?>"
@@ -219,8 +221,8 @@ $urlPrefix = match($role) {
                             </div>
                         </div>
                         <div id="modalItemDetails" class="alert alert-info py-2" style="display:none;">
-                            <strong>Rental Terms:</strong><br>
-                            <small id="modalDetailsText"></small>
+                            <strong>Rental Terms:</strong>
+                            <ul id="modalDetailsText" class="mb-0 mt-1 small ps-3"></ul>
                         </div>
                     </div>
                 </div>
@@ -259,21 +261,33 @@ function showItemModal(itemId) {
     const desc = card.dataset.itemDesc;
     document.getElementById('modalItemDesc').textContent = desc || 'No description available.';
 
-    // Image handling
+    // Image handling — show all uploaded photos (up to 3), not just the primary one
     const imgContainer = document.getElementById('modalItemImg');
-    const imgUrl = card.dataset.itemImg;
-    if (imgUrl && imgUrl.trim() !== '') {
-        imgContainer.innerHTML = '<img src="' + imgUrl + '" class="img-fluid rounded" alt="' + (card.dataset.itemName || '') + '">';
+    const imgUrls = [card.dataset.itemImg, card.dataset.itemImg2, card.dataset.itemImg3]
+        .filter(function (u) { return u && u.trim() !== ''; });
+    if (imgUrls.length > 0) {
+        const alt = card.dataset.itemName || '';
+        imgContainer.classList.remove('py-5');
+        imgContainer.innerHTML = '<div class="d-flex gap-2 flex-wrap justify-content-center">' +
+            imgUrls.map(function (url, i) {
+                return '<img src="' + url + '" class="rounded" alt="' + alt + '" ' +
+                    'style="' + (i === 0 ? 'width:100%;max-height:220px;object-fit:cover;' : 'width:70px;height:70px;object-fit:cover;') + '">';
+            }).join('') +
+            '</div>';
     } else {
+        imgContainer.classList.add('py-5');
         imgContainer.innerHTML = '<i class="bi bi-image fs-1 text-secondary"></i>';
     }
 
-    // Rental details
+    // Rental details — render as a bullet list instead of one run-on line
     const details = card.dataset.itemDetails;
     const detailsDiv = document.getElementById('modalItemDetails');
     const detailsText = document.getElementById('modalDetailsText');
     if (details && details.trim() !== '') {
-        detailsText.textContent = details;
+        detailsText.innerHTML = details.split('•').map(function (t) { return t.trim(); })
+            .filter(Boolean)
+            .map(function (t) { return '<li>' + t.replace(/&/g, '&amp;').replace(/</g, '&lt;') + '</li>'; })
+            .join('');
         detailsDiv.style.display = 'block';
     } else {
         detailsDiv.style.display = 'none';

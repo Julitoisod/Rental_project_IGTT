@@ -589,7 +589,8 @@ if (saved === 'list') {
 
                     <!-- Rental Terms -->
                     <div id="modalRentalTerms" class="alert alert-warning py-2 px-3 mb-3 small" style="display:none;">
-                        <i class="bi bi-info-circle me-1"></i> <span id="modalRentalTermsText"></span>
+                        <i class="bi bi-info-circle me-1"></i><strong>Rental Terms:</strong>
+                        <ul id="modalRentalTermsText" class="mb-0 mt-1 ps-4"></ul>
                     </div>
 
                     <div class="row g-3 mb-3">
@@ -866,7 +867,11 @@ if (itemModal) {
         // Show rental terms if set
         const termsDiv = document.getElementById('modalRentalTerms');
         if (rentalDetails) {
-            document.getElementById('modalRentalTermsText').textContent = rentalDetails;
+            document.getElementById('modalRentalTermsText').innerHTML = rentalDetails.split('•')
+                .map(function (t) { return t.trim(); })
+                .filter(Boolean)
+                .map(function (t) { return '<li>' + t.replace(/&/g, '&amp;').replace(/</g, '&lt;') + '</li>'; })
+                .join('');
             termsDiv.style.display = '';
         } else {
             termsDiv.style.display = 'none';

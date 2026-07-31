@@ -76,7 +76,7 @@ $this->extend('layout/main'); $this->section('content');
                 </div>
                 <div id="rentalDetailsDisplay" class="alert alert-info py-2 px-3" style="display:none;">
                     <strong>Owner's Rental Terms:</strong>
-                    <p id="rentalDetailsText" class="mb-0"></p>
+                    <ul id="rentalDetailsText" class="mb-0 mt-1 ps-4"></ul>
                 </div>
             </div>
         </div>
@@ -261,7 +261,11 @@ function updateRateOptions() {
     document.getElementById('rate24Price').textContent = parseInt(rateOpt2.price).toLocaleString('en-PH');
 
     if (rentalDetails) {
-        detailsText.textContent = rentalDetails;
+        detailsText.innerHTML = rentalDetails.split('•')
+            .map(function (t) { return t.trim(); })
+            .filter(Boolean)
+            .map(function (t) { return '<li>' + t.replace(/&/g, '&amp;').replace(/</g, '&lt;') + '</li>'; })
+            .join('');
         detailsDisplay.style.display = 'block';
     } else {
         detailsDisplay.style.display = 'none';
