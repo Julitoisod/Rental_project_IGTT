@@ -145,3 +145,4 @@ _modules/*
 server.log
 /-w
 /writable/backup-*.sql
+.claude-deploy.json
